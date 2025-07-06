@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkySurge - Flappy Game</title>
+    <!-- Google Fonts: Press Start 2P for retro pixel look -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        html, body {
+            height: 100%;
+        }
+        body {
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            font-family: 'Press Start 2P', monospace;
+            background: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+        #gameContainer {
+            position: relative;
+            background: #fff;
+            border: 2px solid #222;
+            border-radius: 0;
+            box-shadow: none;
+            padding: 0;
+            overflow: hidden;
+            max-width: 100vw;
+        }
+        #gameCanvas {
+            display: block;
+            background: #fff;
+            border: 2px solid #222;
+            border-radius: 0;
+            box-shadow: none;
+        }
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .ui-element {
+            pointer-events: auto;
+        }
+        /* Leaderboard styles */
+        #leaderboardSection {
+            background: #fff;
+            border: 2px solid #222;
+            border-radius: 0;
+            padding: 20px;
+            min-width: 400px;
+            max-width: 600px;
+            text-align: center;
+        }
+        #leaderboardSection h2 {
+            color: #222;
+            font-size: 1.2rem;
+            margin: 0 0 15px 0;
+            text-transform: uppercase;
+        }
+        #leaderboardList {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 0.8rem;
+        }
+        #leaderboardList li {
+            padding: 8px 12px;
+            margin: 4px 0;
+            background: #f8f8f8;
+            border: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #leaderboardList li:nth-child(1) {
+            background: #222;
+            color: #fff;
+            font-weight: bold;
+        }
+        #leaderboardList li:nth-child(2) {
+            background: #444;
+            color: #fff;
+        }
+        #leaderboardList li:nth-child(3) {
+            background: #666;
+            color: #fff;
+        }
+        .score-rank {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .score-value {
+            font-weight: bold;
+        }
+        /* Flat, minimal button style */
+        button, .modern-btn {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.9rem;
+            border: 2px solid #222;
+            border-radius: 0;
+            padding: 10px 18px;
+            background: #fff;
+            color: #222;
+            box-shadow: none;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+            margin: 8px 0;
+        }
+        button:hover, .modern-btn:hover {
+            background: #222;
+            color: #fff;
+        }
+        button:active, .modern-btn:active {
+            background: #eaeaea;
+            color: #222;
+        }
+        /* Flat overlays/modals */
+        .glass {
+            background: #fff;
+            box-shadow: none;
+            border-radius: 0;
+            border: 2px solid #222;
+        }
+        /* Responsive */
+        @media (max-width: 900px) {
+            #gameCanvas {
+                width: 98vw !important;
+                height: 70vw !important;
+                max-width: 98vw;
+                max-height: 70vw;
+            }
+            #gameContainer {
+                max-width: 99vw;
+            }
+            #leaderboardSection {
+                min-width: 90vw;
+                max-width: 90vw;
+            }
+        }
+        @media (max-width: 600px) {
+            #gameCanvas {
+                width: 98vw !important;
+                height: 60vw !important;
+            }
+            #leaderboardSection {
+                padding: 15px;
+            }
+            #leaderboardSection h2 {
+                font-size: 1rem;
+            }
+            #leaderboardList {
+                font-size: 0.7rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer" class="glass">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div class="ui-overlay" id="uiOverlay"></div>
+    </div>
+    
+    <div id="leaderboardSection">
+        <h2>🏆 Leaderboard</h2>
+        <ul id="leaderboardList">
+            <li><span class="score-rank">1.</span><span class="score-value">Loading...</span></li>
+            <li><span class="score-rank">2.</span><span class="score-value">Loading...</span></li>
+            <li><span class="score-rank">3.</span><span class="score-value">Loading...</span></li>
+            <li><span class="score-rank">4.</span><span class="score-value">Loading...</span></li>
+            <li><span class="score-rank">5.</span><span class="score-value">Loading...</span></li>
+        </ul>
+        <button id="logoutBtn" class="modern-btn" style="margin-top: 15px;">Logout</button>
+        <button id="toggleAuthBtn" class="modern-btn" style="margin-top: 5px; font-size: 0.7rem;">Toggle Auth Bypass</button>
+    </div>
+    
+    <!-- Authentication Check - Must run first -->
+    <script>
+        // Check if user is authenticated before loading the game
+        (function() {
+            const API_BASE = 'http://localhost:3000';
+            
+            // Check for token in URL (from Google OAuth)
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            
+            if (token) {
+                // Store token from Google OAuth
+                localStorage.setItem('authToken', token);
+                // Clean up URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+            
+            // Check for stored token
+            const storedToken = localStorage.getItem('authToken');
+            
+            // TEMPORARY: Skip authentication for testing (remove this in production)
+            const skipAuth = localStorage.getItem('skipAuth') === 'true';
+            if (skipAuth) {
+                console.log('Skipping authentication for testing');
+                loadGameScripts();
+                return;
+            }
+            
+            if (!storedToken) {
+                // No token found, redirect to login
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            // Verify token is valid
+            fetch(`${API_BASE}/auth/user`, {
+                headers: {
+                    'Authorization': `Bearer ${storedToken}`
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    // Token is invalid, redirect to login
+                    localStorage.removeItem('authToken');
+                    window.location.href = 'login.html';
+                    return;
+                }
+                // Token is valid, continue loading the game
+                return response.json();
+            })
+            .then(userData => {
+                if (userData) {
+                    // Store user info for the game
+                    localStorage.setItem('currentUser', JSON.stringify(userData.user));
+                    // Continue loading game scripts
+                    loadGameScripts();
+                }
+            })
+            .catch(error => {
+                console.error('Auth check failed:', error);
+                localStorage.removeItem('authToken');
+                window.location.href = 'login.html';
+            });
+            
+            function loadGameScripts() {
+                // Load all game scripts after authentication
+                const scripts = [
+                    'js/Game.js',
+                    'js/Scene.js',
+                    'js/StartScene.js',
+                    'js/GameScene.js',
+                    'js/GameOverScene.js',
+                    'js/Player.js',
+                    'js/Obstacle.js',
+                    'js/InputManager.js',
+                    'js/SoundManager.js',
+                    'js/Leaderboard.js',
+                    'js/PaymentManager.js',
+                    'js/AttemptsManager.js',
+                    'js/AttemptsUI.js',
+                    'js/main.js'
+                ];
+                
+                scripts.forEach(src => {
+                    const script = document.createElement('script');
+                    script.src = src;
+                    document.body.appendChild(script);
+                });
+                
+                // Add logout functionality
+                setTimeout(() => {
+                    const logoutBtn = document.getElementById('logoutBtn');
+                    const toggleAuthBtn = document.getElementById('toggleAuthBtn');
+                    
+                    if (logoutBtn) {
+                        logoutBtn.addEventListener('click', () => {
+                            localStorage.removeItem('authToken');
+                            localStorage.removeItem('currentUser');
+                            window.location.href = 'login.html';
+                        });
+                    }
+                    
+                    if (toggleAuthBtn) {
+                        toggleAuthBtn.addEventListener('click', () => {
+                            const currentSkipAuth = localStorage.getItem('skipAuth') === 'true';
+                            localStorage.setItem('skipAuth', !currentSkipAuth);
+                            alert(`Auth bypass ${!currentSkipAuth ? 'enabled' : 'disabled'}. Refresh the page.`);
+                        });
+                    }
+                }, 1000);
+            }
+        })();
+    </script>
+</body>
+</html> 

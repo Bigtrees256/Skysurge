@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: skysurge-backend
+    env: node
+    plan: free
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: MONGODB_URI
+        fromDatabase:
+          name: skysurge-db
+          property: connectionString
+
+databases:
+  - name: skysurge-db
+    databaseName: skysurge
+    plan: free 
