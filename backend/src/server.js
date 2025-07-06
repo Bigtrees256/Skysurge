@@ -54,9 +54,6 @@ app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Serve static files from the parent directory (frontend files)
-app.use(express.static(path.join(__dirname, '..', '..')));
-
 // Rate limiting
 app.use(rateLimit(15 * 60 * 1000, 100)); // 100 requests per 15 minutes
 
@@ -107,15 +104,6 @@ app.get('/auth/google/callback',
     }
   }
 );
-
-// Fallback: serve index.html for all non-API, non-file requests (SPA support)
-app.get('*', (req, res, next) => {
-  if (!req.originalUrl.startsWith('/api') && !req.originalUrl.startsWith('/auth') && !req.originalUrl.includes('.')) {
-    res.sendFile(path.join(__dirname, '..', '..', 'index.html'));
-  } else {
-    next();
-  }
-});
 
 // 404 handler
 app.use('*', (req, res) => {
