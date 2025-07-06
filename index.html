@@ -184,9 +184,21 @@
     
     <!-- Authentication Check - Must run first -->
     <script>
+        // Always attach logout button handler
+        document.addEventListener('DOMContentLoaded', function() {
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', () => {
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('currentUser');
+                    window.location.href = 'login.html';
+                });
+            }
+        });
+        
         // Check if user is authenticated before loading the game
         (function() {
-            const API_BASE = 'http://localhost:3000';
+            const API_BASE = 'https://skysurge-backend.onrender.com';
             
             // Check for token in URL (from Google OAuth)
             const urlParams = new URLSearchParams(window.location.search);
@@ -262,19 +274,6 @@
                     script.src = src;
                     document.body.appendChild(script);
                 });
-                
-                // Add logout functionality
-                setTimeout(() => {
-                    const logoutBtn = document.getElementById('logoutBtn');
-                    
-                    if (logoutBtn) {
-                        logoutBtn.addEventListener('click', () => {
-                            localStorage.removeItem('authToken');
-                            localStorage.removeItem('currentUser');
-                            window.location.href = 'login.html';
-                        });
-                    }
-                }, 1000);
             }
         })();
     </script>
