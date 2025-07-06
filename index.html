@@ -180,7 +180,6 @@
             <li><span class="score-rank">5.</span><span class="score-value">Loading...</span></li>
         </ul>
         <button id="logoutBtn" class="modern-btn" style="margin-top: 15px;">Logout</button>
-        <button id="toggleAuthBtn" class="modern-btn" style="margin-top: 5px; font-size: 0.7rem;">Toggle Auth Bypass</button>
     </div>
     
     <!-- Authentication Check - Must run first -->
@@ -202,14 +201,6 @@
             
             // Check for stored token
             const storedToken = localStorage.getItem('authToken');
-            
-            // TEMPORARY: Skip authentication for testing (remove this in production)
-            const skipAuth = localStorage.getItem('skipAuth') === 'true';
-            if (skipAuth) {
-                console.log('Skipping authentication for testing');
-                loadGameScripts();
-                return;
-            }
             
             if (!storedToken) {
                 // No token found, redirect to login
@@ -275,21 +266,12 @@
                 // Add logout functionality
                 setTimeout(() => {
                     const logoutBtn = document.getElementById('logoutBtn');
-                    const toggleAuthBtn = document.getElementById('toggleAuthBtn');
                     
                     if (logoutBtn) {
                         logoutBtn.addEventListener('click', () => {
                             localStorage.removeItem('authToken');
                             localStorage.removeItem('currentUser');
                             window.location.href = 'login.html';
-                        });
-                    }
-                    
-                    if (toggleAuthBtn) {
-                        toggleAuthBtn.addEventListener('click', () => {
-                            const currentSkipAuth = localStorage.getItem('skipAuth') === 'true';
-                            localStorage.setItem('skipAuth', !currentSkipAuth);
-                            alert(`Auth bypass ${!currentSkipAuth ? 'enabled' : 'disabled'}. Refresh the page.`);
                         });
                     }
                 }, 1000);
