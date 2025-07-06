@@ -1,4 +1,4 @@
-# SkySurge - Flappy Game
+# SkySurge
 
 A modern, modular flappy-style game built with HTML5 Canvas and JavaScript. Players control a character that must navigate through obstacles by flapping to gain altitude.
 
