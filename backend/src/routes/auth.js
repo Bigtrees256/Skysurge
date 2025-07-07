@@ -101,13 +101,28 @@ router.get('/user', async (req, res) => {
     console.log('🔍 User UID:', decodedToken.uid);
     console.log('🔍 User email:', decodedToken.email);
     
-    // Find or create user based on Firebase UID
+    // Try to find user by Firebase UID first
     let user = await User.findOne({ firebaseUid: decodedToken.uid });
-    console.log('🔍 User found in database:', !!user);
+    console.log('🔍 User found by firebaseUid:', !!user);
     
+    // If not found, try to find by email or username
+    if (!user) {
+      user = await User.findOne({ $or: [
+        { email: decodedToken.email },
+        { username: decodedToken.name || decodedToken.email?.split('@')[0] || 'user' }
+      ] });
+      console.log('🔍 User found by email/username:', !!user);
+      // If found, update with Firebase UID if missing
+      if (user && !user.firebaseUid) {
+        user.firebaseUid = decodedToken.uid;
+        await user.save();
+        console.log('✅ Updated user with Firebase UID');
+      }
+    }
+    
+    // If still not found, create new user
     if (!user) {
       console.log('🔧 Creating new user from Firebase data...');
-      // Create new user from Firebase data
       user = new User({
         username: decodedToken.name || decodedToken.email?.split('@')[0] || 'user',
         email: decodedToken.email,
