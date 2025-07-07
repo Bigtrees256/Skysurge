@@ -36,17 +36,28 @@ router.get('/google/callback',
 router.get('/user', async (req, res) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
+    console.log('🔍 Auth request received');
+    console.log('🔍 Authorization header:', req.headers.authorization ? 'Present' : 'Missing');
+    console.log('🔍 Token length:', token?.length || 0);
+    
     if (!token) {
+      console.log('❌ No token provided');
       return res.status(401).json({ error: 'No token provided' });
     }
     
+    console.log('🔍 Verifying Firebase token...');
     // Verify Firebase token
     const decodedToken = await admin.auth().verifyIdToken(token);
+    console.log('✅ Firebase token verified successfully');
+    console.log('🔍 User UID:', decodedToken.uid);
+    console.log('🔍 User email:', decodedToken.email);
     
     // Find or create user based on Firebase UID
     let user = await User.findOne({ firebaseUid: decodedToken.uid });
+    console.log('🔍 User found in database:', !!user);
     
     if (!user) {
+      console.log('🔧 Creating new user from Firebase data...');
       // Create new user from Firebase data
       user = new User({
         username: decodedToken.name || decodedToken.email?.split('@')[0] || 'user',
@@ -55,8 +66,10 @@ router.get('/user', async (req, res) => {
         googleId: decodedToken.provider_id === 'google.com' ? decodedToken.sub : undefined
       });
       await user.save();
+      console.log('✅ New user created:', user.username);
     }
     
+    console.log('✅ Returning user data for:', user.username);
     res.json({ 
       user: {
         id: user._id,
@@ -66,7 +79,9 @@ router.get('/user', async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('Firebase token verification error:', err);
+    console.error('❌ Firebase token verification error:', err);
+    console.error('❌ Error code:', err.code);
+    console.error('❌ Error message:', err.message);
     res.status(401).json({ error: 'Invalid token' });
   }
 });

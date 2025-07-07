@@ -14,16 +14,22 @@ const admin = require('firebase-admin');
 if (process.env.FIREBASE_SERVICE_ACCOUNT) {
   try {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    console.log('🔧 Firebase service account loaded, initializing...');
+    console.log('📧 Project ID:', serviceAccount.project_id);
+    
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount)
     });
     console.log('✅ Firebase Admin initialized successfully');
   } catch (error) {
     console.error('❌ Failed to parse Firebase service account:', error);
+    console.error('🔍 Service account string length:', process.env.FIREBASE_SERVICE_ACCOUNT?.length);
+    console.error('🔍 First 100 chars:', process.env.FIREBASE_SERVICE_ACCOUNT?.substring(0, 100));
     process.exit(1);
   }
 } else {
   console.error('❌ FIREBASE_SERVICE_ACCOUNT environment variable not found');
+  console.error('🔍 Available env vars:', Object.keys(process.env).filter(key => key.includes('FIREBASE')));
   process.exit(1);
 }
 
