@@ -177,24 +177,34 @@
             pointer-events: none;
         }
     </style>
+    <!-- Firebase App (the core Firebase SDK) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <!-- Firebase Auth SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script>
+      // Your web app's Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyDIzXMR2-ISaIp5SPAHWSoenqDY3M-B8iE",
+        authDomain: "skysurge-67edc.firebaseapp.com",
+        projectId: "skysurge-67edc",
+        storageBucket: "skysurge-67edc.appspot.com",
+        messagingSenderId: "440924548025",
+        appId: "1:440924548025:web:4b1338b2346a77ec9289e8",
+        measurementId: "G-J2Z6XGEGCG"
+      };
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+    </script>
 </head>
 <body>
     <div class="login-container">
         <h1>🚀 SkySurge</h1>
         
-        <!-- Login Form -->
-        <form id="loginForm">
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            
-            <button type="submit" class="btn">Login</button>
+        <!-- Email/Password Login Form -->
+        <form id="emailLoginForm" style="margin-bottom: 20px;">
+            <input type="email" id="emailInput" placeholder="Email" required style="font-family: 'Press Start 2P', monospace; font-size: 0.9rem; padding: 8px; margin-bottom: 8px; width: 90%;"><br>
+            <input type="password" id="passwordInput" placeholder="Password" required style="font-family: 'Press Start 2P', monospace; font-size: 0.9rem; padding: 8px; margin-bottom: 8px; width: 90%;"><br>
+            <button type="submit" class="modern-btn">Sign in with Email</button>
         </form>
 
         <div class="divider"></div>
@@ -224,62 +234,38 @@
         const API_BASE = 'http://localhost:3000';
         let currentToken = null;
 
-        // Check for Google login success on page load
-        window.addEventListener('load', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const googleLogin = urlParams.get('googleLogin');
-            const token = urlParams.get('token');
-
-            if (googleLogin === 'success' && token) {
-                currentToken = token;
-                showSuccess('Google login successful!');
-                setTimeout(() => {
-                    window.location.href = 'index.html';
-                }, 1500);
-            } else if (googleLogin === 'error') {
-                showError('Google login failed. Please try again.');
-            }
-        });
-
-        // Regular login form
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        // Email/Password Login
+        document.getElementById('emailLoginForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            
-            try {
-                setLoading(true);
-                
-                const response = await fetch(`${API_BASE}/api/login`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ username, password })
+            const email = document.getElementById('emailInput').value;
+            const password = document.getElementById('passwordInput').value;
+            firebase.auth().signInWithEmailAndPassword(email, password)
+              .then((userCredential) => {
+                const user = userCredential.user;
+                user.getIdToken().then((idToken) => {
+                  localStorage.setItem('authToken', idToken);
+                  window.location.href = 'index.html';
                 });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    currentToken = data.token;
-                    showSuccess('Login successful!');
-                    setTimeout(() => {
-                        window.location.href = 'index.html';
-                    }, 1500);
-                } else {
-                    showError(data.error || 'Login failed');
-                }
-            } catch (error) {
-                showError('Network error. Please try again.');
-            } finally {
-                setLoading(false);
-            }
+              })
+              .catch((error) => {
+                alert('Email sign-in failed: ' + error.message);
+              });
         });
 
         // Google login button
-        document.getElementById('googleLoginBtn').addEventListener('click', () => {
-            window.location.href = `${API_BASE}/auth/google`;
+        document.getElementById('googleLoginBtn').addEventListener('click', function() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            firebase.auth().signInWithPopup(provider)
+              .then((result) => {
+                const user = result.user;
+                user.getIdToken().then((idToken) => {
+                  localStorage.setItem('authToken', idToken);
+                  window.location.href = 'index.html';
+                });
+              })
+              .catch((error) => {
+                alert('Google sign-in failed: ' + error.message);
+              });
         });
 
         function showError(message) {
@@ -297,7 +283,7 @@
         }
 
         function setLoading(loading) {
-            const form = document.getElementById('loginForm');
+            const form = document.getElementById('emailLoginForm');
             const googleBtn = document.getElementById('googleLoginBtn');
             
             if (loading) {

@@ -229,23 +229,6 @@
         const API_BASE = 'http://localhost:3000';
         let currentToken = null;
 
-        // Check for Google registration success on page load
-        window.addEventListener('load', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const googleLogin = urlParams.get('googleLogin');
-            const token = urlParams.get('token');
-
-            if (googleLogin === 'success' && token) {
-                currentToken = token;
-                showSuccess('Google registration successful!');
-                setTimeout(() => {
-                    window.location.href = 'index.html';
-                }, 1500);
-            } else if (googleLogin === 'error') {
-                showError('Google registration failed. Please try again.');
-            }
-        });
-
         // Regular registration form
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -285,11 +268,6 @@
             } finally {
                 setLoading(false);
             }
-        });
-
-        // Google registration button
-        document.getElementById('googleRegisterBtn').addEventListener('click', () => {
-            window.location.href = `${API_BASE}/auth/google`;
         });
 
         function showError(message) {
