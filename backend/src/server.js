@@ -7,6 +7,26 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 
+// Initialize Firebase Admin
+const admin = require('firebase-admin');
+
+// Load service account from environment variable
+if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+  try {
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+    console.log('✅ Firebase Admin initialized successfully');
+  } catch (error) {
+    console.error('❌ Failed to parse Firebase service account:', error);
+    process.exit(1);
+  }
+} else {
+  console.error('❌ FIREBASE_SERVICE_ACCOUNT environment variable not found');
+  process.exit(1);
+}
+
 // Import routes
 const authRoutes = require('./routes/auth');
 const scoreRoutes = require('./routes/scores');

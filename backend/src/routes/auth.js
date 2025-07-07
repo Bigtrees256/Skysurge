@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const admin = require('firebase-admin');
 
 // Google OAuth routes
 router.get('/google', (req, res, next) => {
@@ -31,7 +32,7 @@ router.get('/google/callback',
   }
 );
 
-// Get current user (JWT-based)
+// Get current user (Firebase token-based)
 router.get('/user', async (req, res) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
@@ -39,15 +40,33 @@ router.get('/user', async (req, res) => {
       return res.status(401).json({ error: 'No token provided' });
     }
     
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.userId).select('-password');
+    // Verify Firebase token
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    
+    // Find or create user based on Firebase UID
+    let user = await User.findOne({ firebaseUid: decodedToken.uid });
     
     if (!user) {
-      return res.status(401).json({ error: 'Invalid token' });
+      // Create new user from Firebase data
+      user = new User({
+        username: decodedToken.name || decodedToken.email?.split('@')[0] || 'user',
+        email: decodedToken.email,
+        firebaseUid: decodedToken.uid,
+        googleId: decodedToken.provider_id === 'google.com' ? decodedToken.sub : undefined
+      });
+      await user.save();
     }
     
-    res.json({ user });
+    res.json({ 
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        firebaseUid: user.firebaseUid
+      }
+    });
   } catch (err) {
+    console.error('Firebase token verification error:', err);
     res.status(401).json({ error: 'Invalid token' });
   }
 });

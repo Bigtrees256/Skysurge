@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const admin = require('firebase-admin');
 
-// Middleware to verify JWT token
+// Middleware to verify Firebase token
 const authenticateToken = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
@@ -13,27 +14,32 @@ const authenticateToken = async (req, res, next) => {
       });
     }
     
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.userId).select('-password');
+    // Verify Firebase token
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    
+    // Find user based on Firebase UID
+    const user = await User.findOne({ firebaseUid: decodedToken.uid }).select('-password');
     
     if (!user) {
       return res.status(401).json({ 
-        error: 'Invalid or expired token',
-        code: 'INVALID_TOKEN'
+        error: 'User not found',
+        code: 'USER_NOT_FOUND'
       });
     }
     
     req.user = user;
     next();
   } catch (err) {
-    if (err.name === 'TokenExpiredError') {
+    console.error('Firebase token verification error:', err);
+    
+    if (err.code === 'auth/id-token-expired') {
       return res.status(401).json({ 
         error: 'Token expired',
         code: 'TOKEN_EXPIRED'
       });
     }
     
-    if (err.name === 'JsonWebTokenError') {
+    if (err.code === 'auth/invalid-id-token') {
       return res.status(401).json({ 
         error: 'Invalid token',
         code: 'INVALID_TOKEN'
@@ -53,8 +59,8 @@ const optionalAuth = async (req, res, next) => {
     const token = req.headers.authorization?.split(' ')[1];
     
     if (token) {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findById(decoded.userId).select('-password');
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      const user = await User.findOne({ firebaseUid: decodedToken.uid }).select('-password');
       if (user) {
         req.user = user;
       }
