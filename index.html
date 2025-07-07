@@ -251,7 +251,6 @@
             });
             
             function loadGameScripts() {
-                // Load all game scripts after authentication
                 const scripts = [
                     'js/Scene.js',
                     'js/StartScene.js',
@@ -267,12 +266,16 @@
                     'js/AttemptsUI.js',
                     'js/main.js'
                 ];
-                
-                scripts.forEach(src => {
+
+                function loadScriptSequentially(index) {
+                    if (index >= scripts.length) return;
                     const script = document.createElement('script');
-                    script.src = src;
+                    script.src = scripts[index];
+                    script.onload = () => loadScriptSequentially(index + 1);
                     document.body.appendChild(script);
-                });
+                }
+
+                loadScriptSequentially(0);
             }
         })();
     </script>
