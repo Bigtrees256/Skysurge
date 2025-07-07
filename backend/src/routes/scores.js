@@ -3,6 +3,7 @@ const router = express.Router();
 const Score = require('../models/Score');
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const verifyFirebaseToken = require('../middleware/verifyFirebaseToken');
 
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
@@ -24,6 +25,9 @@ const authenticateToken = async (req, res, next) => {
     res.status(401).json({ error: 'Invalid token' });
   }
 };
+
+// Protect all routes with Firebase token verification
+router.use(verifyFirebaseToken);
 
 // Submit a new score
 router.post('/', authenticateToken, async (req, res) => {

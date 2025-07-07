@@ -4,6 +4,10 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { authenticateToken } = require('../middleware/auth');
 const PlayerAttempts = require('../models/PlayerAttempts');
 const User = require('../models/User');
+const verifyFirebaseToken = require('../middleware/verifyFirebaseToken');
+
+// Protect all routes with Firebase token verification
+router.use(verifyFirebaseToken);
 
 // Create payment intent for attempts purchase
 router.post('/create-payment-intent', authenticateToken, async (req, res) => {
