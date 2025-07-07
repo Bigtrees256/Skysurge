@@ -244,6 +244,7 @@
                 const user = userCredential.user;
                 user.getIdToken().then((idToken) => {
                   localStorage.setItem('authToken', idToken);
+                  alert('Token set: ' + idToken.substring(0, 30) + '...');
                   window.location.href = 'index.html';
                 });
               })
@@ -260,6 +261,7 @@
                 const user = result.user;
                 user.getIdToken().then((idToken) => {
                   localStorage.setItem('authToken', idToken);
+                  alert('Token set: ' + idToken.substring(0, 30) + '...');
                   window.location.href = 'index.html';
                 });
               })
