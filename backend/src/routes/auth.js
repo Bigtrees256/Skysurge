@@ -32,6 +32,55 @@ router.get('/google/callback',
   }
 );
 
+// Test endpoint to verify Firebase Admin is working
+router.get('/test-firebase', async (req, res) => {
+  try {
+    console.log('🧪 Testing Firebase Admin...');
+    
+    // Check if admin is initialized
+    if (!admin.apps.length) {
+      return res.status(500).json({ error: 'Firebase Admin not initialized' });
+    }
+    
+    console.log('✅ Firebase Admin is initialized');
+    console.log('🔧 Available apps:', admin.apps.length);
+    
+    res.json({ 
+      message: 'Firebase Admin is working',
+      apps: admin.apps.length,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('❌ Firebase test error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Test endpoint to check token format
+router.get('/test-token', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    console.log('🧪 Testing token format...');
+    console.log('🔍 Authorization header:', req.headers.authorization ? 'Present' : 'Missing');
+    console.log('🔍 Token length:', token?.length || 0);
+    console.log('🔍 Token starts with:', token?.substring(0, 20) + '...');
+    
+    if (!token) {
+      return res.status(400).json({ error: 'No token provided' });
+    }
+    
+    res.json({ 
+      message: 'Token received',
+      tokenLength: token.length,
+      tokenStart: token.substring(0, 20) + '...',
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('❌ Token test error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Get current user (Firebase token-based)
 router.get('/user', async (req, res) => {
   try {
