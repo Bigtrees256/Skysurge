@@ -8,9 +8,9 @@
     <title>Login - SkySurge</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    <!-- Firebase SDK - Updated to latest version -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     
     <style>
         * {
@@ -260,23 +260,70 @@
             try {
                 console.log('🔍 Checking for Google redirect result...');
                 const result = await firebase.auth().getRedirectResult();
+                console.log('🔍 Redirect result:', result);
 
                 if (result.user) {
                     console.log('✅ Google login successful:', result.user.email);
-                    showMessage('Google login successful! Redirecting...', 'success');
+                    console.log('✅ User details:', {
+                        uid: result.user.uid,
+                        email: result.user.email,
+                        displayName: result.user.displayName
+                    });
+                    showMessage('Google login successful! Checking user setup...', 'success');
 
                     // Store token
                     const token = await result.user.getIdToken();
                     localStorage.setItem('authToken', token);
+                    console.log('✅ Token stored');
 
-                    // Redirect to username setup (Google users always need this)
-                    setTimeout(() => {
-                        window.location.href = 'setup-username.html';
-                    }, 1000);
+                    // Check if user needs username setup
+                    try {
+                        const response = await fetch(`${window.AppConfig.apiBaseUrl}/api/auth/user-info`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+
+                        if (response.ok) {
+                            const userData = await response.json();
+                            console.log('✅ User data from backend:', userData);
+
+                            if (userData.user.needsUsername) {
+                                console.log('⚠️ User needs username setup');
+                                showMessage('Redirecting to username setup...', 'info');
+                                setTimeout(() => {
+                                    window.location.href = 'setup-username.html';
+                                }, 1000);
+                            } else {
+                                console.log('✅ User has username, redirecting to game');
+                                showMessage('Login complete! Redirecting to game...', 'success');
+                                setTimeout(() => {
+                                    window.location.href = 'index.html';
+                                }, 1000);
+                            }
+                        } else {
+                            console.warn('⚠️ Backend check failed, assuming new user');
+                            showMessage('Redirecting to username setup...', 'info');
+                            setTimeout(() => {
+                                window.location.href = 'setup-username.html';
+                            }, 1000);
+                        }
+                    } catch (backendError) {
+                        console.error('❌ Backend check error:', backendError);
+                        showMessage('Login successful, but backend check failed. Redirecting to setup...', 'warning');
+                        setTimeout(() => {
+                            window.location.href = 'setup-username.html';
+                        }, 1000);
+                    }
+                } else {
+                    console.log('🔍 No redirect result - user probably came directly to login page');
                 }
             } catch (error) {
-                console.error('Redirect result error:', error);
-                showMessage('Authentication error: ' + error.message, 'error');
+                console.error('❌ Redirect result error:', error);
+                console.error('❌ Error details:', {
+                    code: error.code,
+                    message: error.message,
+                    stack: error.stack
+                });
+                showMessage('Authentication error: ' + error.message + ' (Check console for details)', 'error');
             }
         }
         
@@ -312,20 +359,37 @@
         // Google login
         googleBtn.addEventListener('click', async () => {
             clearMessage();
+            console.log('🔍 Google login button clicked');
 
             try {
                 showLoading(true);
+                showMessage('Initializing Google login...', 'info');
+
+                // Check if Firebase is properly initialized
+                if (!firebase.apps.length) {
+                    throw new Error('Firebase not initialized');
+                }
+
                 const provider = new firebase.auth.GoogleAuthProvider();
                 provider.addScope('email');
                 provider.addScope('profile');
 
+                console.log('🔍 Firebase app:', firebase.app().name);
+                console.log('🔍 Auth domain:', firebase.app().options.authDomain);
                 console.log('🔄 Redirecting to Google...');
+
+                showMessage('Redirecting to Google...', 'info');
                 await firebase.auth().signInWithRedirect(provider);
 
             } catch (error) {
                 showLoading(false);
-                console.error('Google login error:', error);
-                showMessage('Google login failed: ' + error.message);
+                console.error('❌ Google login error:', error);
+                console.error('❌ Error details:', {
+                    code: error.code,
+                    message: error.message,
+                    stack: error.stack
+                });
+                showMessage('Google login failed: ' + error.message + ' (Check console for details)');
             }
         });
 
