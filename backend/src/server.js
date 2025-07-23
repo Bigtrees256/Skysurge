@@ -28,7 +28,7 @@ const requestLogger = require('./middleware/requestLogger');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Enhanced security middleware
+// Enhanced security middleware with proper Google Auth CSP
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
   contentSecurityPolicy: {
