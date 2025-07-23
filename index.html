@@ -13,7 +13,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
     
     <!-- Configuration -->
-    <script src="js/config.js?v=auth-fix-3"></script>
+    <script src="js/config.js?v=simple-fix"></script>
 
     <!-- Firebase Configuration -->
     <script>
@@ -488,48 +488,69 @@
             }
         }
         
-        // Simplified authentication check using centralized AuthManager
-        (async function() {
-            console.log('🔍 Main page - Starting auth check with AuthManager...');
+        // Simple authentication check
+        (function() {
+            console.log('🔍 Main page - Starting simple auth check...');
 
             // Show loading state
             document.getElementById('gameContainer').style.display = 'none';
-            showLoading(true);
 
-            try {
-                // Use AuthManager for consistent auth handling
-                const authValid = await window.authManager.checkAuthAndRedirect(true, ['index.html']);
-
-                if (authValid) {
-                    console.log('✅ Main page - Authentication successful');
-                    showLoading(false);
-
-
-                    // Show game UI
-                    document.getElementById('gameContainer').style.display = 'block';
-
-                    // Initialize game systems
-                    if (document.readyState === 'complete') {
-                        await initializeAttemptsSystem();
-                    } else {
-                        document.addEventListener('DOMContentLoaded', initializeAttemptsSystem);
-                    }
-
-                    // Reload attempts after successful authentication
-                    setTimeout(async () => {
-                        if (window.game && window.game.attemptsManager) {
-                            console.log('🔄 Main page: Reloading attempts after authentication...');
-                            await window.game.attemptsManager.loadAttempts();
-                        }
-                    }, 1500);
-                } else {
-                    console.log('❌ Main page - Authentication failed, redirecting handled by AuthManager');
-                }
-            } catch (error) {
-                console.error('❌ Main page - Auth check failed:', error);
-                showLoading(false);
+            // Set timeout to prevent infinite loading
+            setTimeout(() => {
+                console.log('⚠️ Auth timeout - redirecting to login');
                 window.location.href = 'login.html';
-            }
+            }, 8000);
+
+            // Check auth state
+            firebase.auth().onAuthStateChanged(async (user) => {
+                console.log('🔍 Auth state:', user ? user.email : 'No user');
+                showLoading(false);
+
+                if (!user) {
+                    console.log('❌ No user - redirecting to login');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                console.log('✅ User authenticated:', user.email);
+
+                // Store token
+                try {
+                    const token = await user.getIdToken();
+                    localStorage.setItem('authToken', token);
+                } catch (error) {
+                    console.error('Token error:', error);
+                }
+
+                // Check if user needs username setup
+                try {
+                    const response = await fetch(`${window.AppConfig.apiBaseUrl}/api/auth/user-info`, {
+                        headers: { 'Authorization': `Bearer ${await user.getIdToken()}` }
+                    });
+
+                    if (response.ok) {
+                        const userData = await response.json();
+                        if (!userData.user.hasUsername) {
+                            console.log('⚠️ User needs username setup');
+                            window.location.href = 'setup-username.html';
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Backend check failed:', error);
+                    // Continue anyway for now
+                }
+
+                // Show game
+                document.getElementById('gameContainer').style.display = 'block';
+
+                // Initialize game systems
+                if (document.readyState === 'complete') {
+                    await initializeAttemptsSystem();
+                } else {
+                    document.addEventListener('DOMContentLoaded', initializeAttemptsSystem);
+                }
+            });
         })();
     </script>
     <!-- Game Scripts - Load in dependency order -->
@@ -544,7 +565,7 @@
     <script src="js/Game.js?v=35"></script>
     <script src="js/Leaderboard.js?v=35"></script>
             <script src="js/AntiCheatManager.js?v=50&t=1752835000"></script>
-    <script src="js/AuthManager.js?v=auth-fix-3"></script>
+
     <script src="js/AdManager.js?v=30"></script>
     <script src="js/AdSenseManager.js?v=30"></script>
     <script src="js/AttemptsManager.js?v=40"></script>

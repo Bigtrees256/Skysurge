@@ -208,11 +208,10 @@
     </div>
 
     <!-- Configuration -->
-    <script src="js/config.js?v=auth-fix-3"></script>
-    <script src="js/AuthManager.js?v=auth-fix-3"></script>
+    <script src="js/config.js?v=simple-fix"></script>
 
     <script>
-        console.log('🔧 Login page loaded - Auth Fix Version 3.0');
+        console.log('🔧 Login page loaded - Simple Fix Version');
 
         // Firebase Configuration from centralized config
         const firebaseConfig = window.AppConfig.firebaseConfig;
@@ -227,18 +226,15 @@
         const emailForm = document.getElementById('emailLoginForm');
         const googleBtn = document.getElementById('googleLoginBtn');
 
-        let authStateChecked = false;
-        let redirectHandled = false;
+        // Simple initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🔍 Login page: DOM loaded');
 
-        // Initialize page
-        document.addEventListener('DOMContentLoaded', async () => {
-            console.log('🔍 Login page: DOM loaded, initializing...');
+            // Check for redirect result first
+            handleRedirectResult();
 
-            // First check for redirect result
-            await handleRedirectResult();
-
-            // Then check if user is already logged in
-            await checkExistingAuth();
+            // Show login form immediately
+            showLoading(false);
         });
         
         // Show/hide loading
@@ -259,65 +255,30 @@
             messageDiv.style.display = 'none';
         }
 
-        // Check if user is already authenticated
-        async function checkExistingAuth() {
-            try {
-                console.log('🔍 Login page: Checking existing auth...');
-                showLoading(true);
-
-                const user = await window.authManager.waitForAuth(5000);
-
-                if (user) {
-                    console.log('✅ Login page: User already authenticated:', user.email);
-                    showMessage('Already logged in! Redirecting...', 'success');
-
-                    // Use AuthManager to handle redirect logic
-                    const authValid = await window.authManager.checkAuthAndRedirect(true, ['login.html']);
-                    if (authValid) {
-                        setTimeout(() => {
-                            window.location.href = 'index.html';
-                        }, 1000);
-                    }
-                } else {
-                    console.log('🔍 Login page: No user authenticated, showing login form');
-                    showLoading(false);
-                }
-            } catch (error) {
-                console.log('🔍 Login page: Auth check timeout or error, showing login form');
-                showLoading(false);
-            }
-        }
-        
         // Handle redirect result from Google sign-in
         async function handleRedirectResult() {
             try {
-                console.log('🔍 Login page: Checking for Google redirect result...');
+                console.log('🔍 Checking for Google redirect result...');
                 const result = await firebase.auth().getRedirectResult();
 
                 if (result.user) {
-                    console.log('✅ Login page: Google redirect login successful:', result.user.email);
+                    console.log('✅ Google login successful:', result.user.email);
                     showMessage('Google login successful! Redirecting...', 'success');
 
-                    // Let AuthManager handle the rest
-                    const authValid = await window.authManager.checkAuthAndRedirect(true, ['login.html']);
-                    if (authValid) {
-                        setTimeout(() => {
-                            window.location.href = 'index.html';
-                        }, 1000);
-                    }
-                    return true;
-                } else {
-                    console.log('🔍 Login page: No redirect result found');
-                    return false;
+                    // Store token
+                    const token = await result.user.getIdToken();
+                    localStorage.setItem('authToken', token);
+
+                    // Redirect to username setup (Google users always need this)
+                    setTimeout(() => {
+                        window.location.href = 'setup-username.html';
+                    }, 1000);
                 }
             } catch (error) {
-                console.error('Login page: Redirect result error:', error);
+                console.error('Redirect result error:', error);
                 showMessage('Authentication error: ' + error.message, 'error');
-                return false;
             }
         }
-
-        // Note: Auth state management is now handled by centralized AuthManager
         
         // Email/Password login
         emailForm.addEventListener('submit', async (e) => {
@@ -358,11 +319,8 @@
                 provider.addScope('email');
                 provider.addScope('profile');
 
-                // Use redirect for better reliability (NOT popup)
-                console.log('🔄 Using signInWithRedirect (NOT popup) for Google authentication...');
-                console.log('🔧 Auth Fix Version 2.0 - Redirect method confirmed');
+                console.log('🔄 Redirecting to Google...');
                 await firebase.auth().signInWithRedirect(provider);
-                // Note: Page will redirect, so code after this won't execute
 
             } catch (error) {
                 showLoading(false);
