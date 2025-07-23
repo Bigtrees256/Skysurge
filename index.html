@@ -495,24 +495,32 @@
             // Show loading state
             document.getElementById('gameContainer').style.display = 'none';
 
-            // Set timeout to prevent infinite loading
-            setTimeout(() => {
+            // Set timeout to prevent infinite loading (increased for slower connections)
+            const authTimeout = setTimeout(() => {
                 console.log('⚠️ Auth timeout - redirecting to login');
                 window.location.href = 'login.html';
-            }, 8000);
+            }, 15000);
 
             // Check auth state
             firebase.auth().onAuthStateChanged(async (user) => {
-                console.log('🔍 Auth state:', user ? user.email : 'No user');
+                console.log('🔍 Auth state changed:', user ? user.email : 'No user');
+                clearTimeout(authTimeout); // Clear timeout since auth state changed
                 showLoading(false);
 
                 if (!user) {
-                    console.log('❌ No user - redirecting to login');
+                    console.log('❌ No user authenticated - redirecting to login');
+                    console.log('📍 Current URL:', window.location.href);
                     window.location.href = 'login.html';
                     return;
                 }
 
                 console.log('✅ User authenticated:', user.email);
+                console.log('✅ User details:', {
+                    uid: user.uid,
+                    email: user.email,
+                    displayName: user.displayName,
+                    emailVerified: user.emailVerified
+                });
 
                 // Store token
                 try {

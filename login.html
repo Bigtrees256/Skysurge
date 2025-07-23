@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- CSP Fix for Google Auth - Version 2025-07-23 -->
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://js.stripe.com https://accounts.google.com; connect-src 'self' https://api.stripe.com https://accounts.google.com https://oauth2.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; frame-src 'self' https://accounts.google.com https://content.googleapis.com; child-src 'self' https://accounts.google.com;">
+    <!-- CSP Fix for Google Auth - Updated for popup support -->
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://js.stripe.com https://accounts.google.com; connect-src 'self' https://api.stripe.com https://accounts.google.com https://oauth2.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.googleapis.com; frame-src 'self' https://accounts.google.com https://content.googleapis.com https://*.google.com; child-src 'self' https://accounts.google.com https://*.google.com; object-src 'none';">
     <title>Login - SkySurge</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     
@@ -204,6 +204,11 @@
             <button id="signOutBtn" class="btn" style="display: none; background: #dc3545; margin-top: 15px;">
                 Sign Out Current User
             </button>
+
+            <!-- Debug Button (temporary) -->
+            <button id="debugBtn" class="btn" style="background: #28a745; margin-top: 15px; font-size: 0.7rem;">
+                🔍 Debug Google Login
+            </button>
         </div>
     </div>
 
@@ -255,6 +260,61 @@
             messageDiv.style.display = 'none';
         }
 
+        // Handle successful login (shared between popup and redirect)
+        async function handleSuccessfulLogin(user) {
+            console.log('✅ Login successful:', user.email);
+            console.log('✅ User details:', {
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName
+            });
+
+            showMessage('Login successful! Checking user setup...', 'success');
+
+            // Store token
+            const token = await user.getIdToken();
+            localStorage.setItem('authToken', token);
+            console.log('✅ Token stored');
+
+            // Check if user needs username setup
+            try {
+                const response = await fetch(`${window.AppConfig.apiBaseUrl}/api/auth/user-info`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const userData = await response.json();
+                    console.log('✅ User data from backend:', userData);
+
+                    if (userData.user.needsUsername) {
+                        console.log('⚠️ User needs username setup');
+                        showMessage('Redirecting to username setup...', 'info');
+                        setTimeout(() => {
+                            window.location.href = 'setup-username.html';
+                        }, 1000);
+                    } else {
+                        console.log('✅ User has username, redirecting to game');
+                        showMessage('Login complete! Redirecting to game...', 'success');
+                        setTimeout(() => {
+                            window.location.href = 'index.html';
+                        }, 1000);
+                    }
+                } else {
+                    console.warn('⚠️ Backend check failed, assuming new user');
+                    showMessage('Redirecting to username setup...', 'info');
+                    setTimeout(() => {
+                        window.location.href = 'setup-username.html';
+                    }, 1000);
+                }
+            } catch (backendError) {
+                console.error('❌ Backend check error:', backendError);
+                showMessage('Login successful, but backend check failed. Redirecting to setup...', 'warning');
+                setTimeout(() => {
+                    window.location.href = 'setup-username.html';
+                }, 1000);
+            }
+        }
+
         // Handle redirect result from Google sign-in
         async function handleRedirectResult() {
             try {
@@ -263,56 +323,8 @@
                 console.log('🔍 Redirect result:', result);
 
                 if (result.user) {
-                    console.log('✅ Google login successful:', result.user.email);
-                    console.log('✅ User details:', {
-                        uid: result.user.uid,
-                        email: result.user.email,
-                        displayName: result.user.displayName
-                    });
-                    showMessage('Google login successful! Checking user setup...', 'success');
-
-                    // Store token
-                    const token = await result.user.getIdToken();
-                    localStorage.setItem('authToken', token);
-                    console.log('✅ Token stored');
-
-                    // Check if user needs username setup
-                    try {
-                        const response = await fetch(`${window.AppConfig.apiBaseUrl}/api/auth/user-info`, {
-                            headers: { 'Authorization': `Bearer ${token}` }
-                        });
-
-                        if (response.ok) {
-                            const userData = await response.json();
-                            console.log('✅ User data from backend:', userData);
-
-                            if (userData.user.needsUsername) {
-                                console.log('⚠️ User needs username setup');
-                                showMessage('Redirecting to username setup...', 'info');
-                                setTimeout(() => {
-                                    window.location.href = 'setup-username.html';
-                                }, 1000);
-                            } else {
-                                console.log('✅ User has username, redirecting to game');
-                                showMessage('Login complete! Redirecting to game...', 'success');
-                                setTimeout(() => {
-                                    window.location.href = 'index.html';
-                                }, 1000);
-                            }
-                        } else {
-                            console.warn('⚠️ Backend check failed, assuming new user');
-                            showMessage('Redirecting to username setup...', 'info');
-                            setTimeout(() => {
-                                window.location.href = 'setup-username.html';
-                            }, 1000);
-                        }
-                    } catch (backendError) {
-                        console.error('❌ Backend check error:', backendError);
-                        showMessage('Login successful, but backend check failed. Redirecting to setup...', 'warning');
-                        setTimeout(() => {
-                            window.location.href = 'setup-username.html';
-                        }, 1000);
-                    }
+                    console.log('✅ Google redirect login successful:', result.user.email);
+                    await handleSuccessfulLogin(result.user);
                 } else {
                     console.log('🔍 No redirect result - user probably came directly to login page');
                 }
@@ -376,10 +388,31 @@
 
                 console.log('🔍 Firebase app:', firebase.app().name);
                 console.log('🔍 Auth domain:', firebase.app().options.authDomain);
-                console.log('🔄 Redirecting to Google...');
+                console.log('🔄 Opening Google popup...');
 
-                showMessage('Redirecting to Google...', 'info');
-                await firebase.auth().signInWithRedirect(provider);
+                showMessage('Opening Google login popup...', 'info');
+
+                // Try popup first, fallback to redirect if popup fails
+                try {
+                    const result = await firebase.auth().signInWithPopup(provider);
+                    console.log('✅ Google popup login successful:', result.user.email);
+
+                    // Handle successful login immediately
+                    await handleSuccessfulLogin(result.user);
+
+                } catch (popupError) {
+                    console.warn('⚠️ Popup failed, trying redirect:', popupError.message);
+
+                    if (popupError.code === 'auth/popup-blocked' ||
+                        popupError.code === 'auth/popup-closed-by-user' ||
+                        popupError.code === 'auth/cancelled-popup-request') {
+
+                        showMessage('Popup blocked. Trying redirect method...', 'info');
+                        await firebase.auth().signInWithRedirect(provider);
+                    } else {
+                        throw popupError; // Re-throw other errors
+                    }
+                }
 
             } catch (error) {
                 showLoading(false);
@@ -418,6 +451,39 @@
                 signOutBtn.style.display = 'none';
             }
         });
+
+        // Debug button functionality
+        const debugBtn = document.getElementById('debugBtn');
+        if (debugBtn) {
+            debugBtn.addEventListener('click', async () => {
+                console.log('🔍 DEBUG: Testing Google login setup...');
+
+                try {
+                    // Test Firebase initialization
+                    console.log('🔍 Firebase apps:', firebase.apps.length);
+                    console.log('🔍 Firebase config:', firebase.app().options);
+
+                    // Test Google provider creation
+                    const provider = new firebase.auth.GoogleAuthProvider();
+                    console.log('🔍 Google provider created:', provider);
+
+                    // Test popup capability
+                    console.log('🔍 Testing popup...');
+                    showMessage('Testing Google popup (check console for details)...', 'info');
+
+                    const result = await firebase.auth().signInWithPopup(provider);
+                    console.log('✅ DEBUG: Popup worked!', result);
+
+                } catch (error) {
+                    console.error('❌ DEBUG: Error details:', {
+                        code: error.code,
+                        message: error.message,
+                        stack: error.stack
+                    });
+                    showMessage(`Debug error: ${error.code} - ${error.message}`, 'error');
+                }
+            });
+        }
     </script>
 </body>
 </html> 
