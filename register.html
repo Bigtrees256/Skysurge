@@ -443,22 +443,41 @@
         }
         
         // Handle redirect result first (for Google sign-in)
-        firebase.auth().getRedirectResult().then((result) => {
-            redirectHandled = true;
-            if (result.user) {
-                console.log('✅ Redirect successful:', result.user.email);
-                showMessage('Registration successful! Redirecting...', 'success');
-                setTimeout(() => {
-                    window.location.href = 'index.html';
-                }, 1000);
-            } else {
-                // Check current auth state
+        async function handleRedirectResult() {
+            try {
+                console.log('🔍 Checking for Google redirect result...');
+                const result = await firebase.auth().getRedirectResult();
+                redirectHandled = true;
+
+                if (result.user) {
+                    console.log('✅ Google registration successful:', result.user.email);
+
+                    // Store token immediately
+                    const token = await result.user.getIdToken();
+                    localStorage.setItem('authToken', token);
+                    console.log('✅ Token stored after Google registration');
+
+                    // Always redirect to username setup for Google users
+                    showMessage('Google registration successful! Please set up your username to continue.', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'setup-username.html';
+                    }, 1500);
+                } else {
+                    console.log('🔍 No redirect result found');
+                    // Check current auth state
+                    checkAuthState();
+                }
+            } catch (error) {
+                redirectHandled = true;
+                console.error('Redirect error:', error);
+                showMessage('Registration error: ' + error.message, 'error');
                 checkAuthState();
             }
-        }).catch((error) => {
-            redirectHandled = true;
-            console.error('Redirect error:', error);
-            checkAuthState();
+        }
+
+        // Initialize redirect result handling
+        document.addEventListener('DOMContentLoaded', () => {
+            handleRedirectResult();
         });
         
         // Check authentication state
@@ -671,16 +690,10 @@
                 provider.addScope('email');
                 provider.addScope('profile');
 
-                const result = await firebase.auth().signInWithPopup(provider);
-                console.log('✅ Google registration successful:', result.user.email);
-
-                // Always redirect to username setup for Google users
-                console.log('✅ Google authentication successful, redirecting to username setup...');
-                showMessage('Google sign-in successful! Please set up your username to continue.', 'success');
-
-                setTimeout(() => {
-                    window.location.href = 'setup-username.html';
-                }, 1500);
+                // Use redirect for better reliability
+                console.log('🔄 Redirecting to Google for registration...');
+                await firebase.auth().signInWithRedirect(provider);
+                // Note: Page will redirect, so code after this won't execute
 
             } catch (error) {
                 showLoading(false);

@@ -501,6 +501,15 @@
             setTimeout(() => {
                 console.log('🔍 Main page - Firebase initialized, checking auth...');
 
+                // Fallback timeout in case auth never resolves
+                setTimeout(() => {
+                    if (!authResolved) {
+                        console.error('⚠️ Auth timeout - redirecting to login');
+                        showLoading(false);
+                        window.location.href = 'login.html';
+                    }
+                }, 10000); // 10 second timeout
+
                 // Set up auth state listener (only once)
                 firebase.auth().onAuthStateChanged(async function(user) {
                     if (authResolved) {
@@ -510,6 +519,9 @@
                     authResolved = true;
 
                     console.log('🔍 Main page - Auth state determined:', user ? user.email : 'No user');
+
+                    // Hide loading message
+                    showLoading(false);
 
                     if (!user) {
                         console.log('❌ Main page - No user authenticated, redirecting to login');

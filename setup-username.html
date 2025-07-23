@@ -8,6 +8,9 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+
+    <!-- Configuration -->
+    <script src="js/config.js"></script>
     
     <style>
         body {
@@ -237,21 +240,13 @@
     </div>
 
     <script>
-        // Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyDI2xMR2-ISaIp5SPAHWSoenqDY3M-B8iE",
-            authDomain: "skysurge-67edc.firebaseapp.com",
-            projectId: "skysurge-67edc",
-            storageBucket: "skysurge-67edc.firebasestorage.app",
-            messagingSenderId: "40942548025",
-            appId: "1:40942548025:web:2093ed85e51a6eb89289e8",
-            measurementId: "G-PZ1SZN6RW4"
-        };
-        
+        // Firebase Configuration from centralized config
+        const firebaseConfig = window.AppConfig.firebaseConfig;
+
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         
-        const API_BASE = 'http://localhost:3000/api';
+        const API_BASE = `${window.AppConfig.apiBaseUrl}/api`;
         
         // DOM elements
         const loadingMessage = document.getElementById('loadingMessage');

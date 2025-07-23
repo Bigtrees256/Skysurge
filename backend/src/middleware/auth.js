@@ -11,6 +11,15 @@ const authenticateToken = async (req, res, next) => {
       });
     }
 
+    // Check if Firebase Admin is initialized
+    if (!admin.apps.length) {
+      console.error('❌ Firebase Admin not initialized - cannot verify token');
+      return res.status(500).json({
+        error: 'Authentication service unavailable',
+        code: 'AUTH_SERVICE_ERROR'
+      });
+    }
+
     // Verify Firebase token
     const decodedToken = await admin.auth().verifyIdToken(token);
 

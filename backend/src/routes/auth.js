@@ -3,6 +3,18 @@ const router = express.Router();
 const admin = require('firebase-admin');
 const User = require('../models/User');
 
+// Test endpoint to check if backend is working
+router.get('/test', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'Auth service is running',
+    timestamp: new Date().toISOString(),
+    firebase: {
+      initialized: admin.apps.length > 0
+    }
+  });
+});
+
 // Check username availability
 router.get('/check-username/:username', async (req, res) => {
   try {
@@ -216,6 +228,15 @@ router.get('/user-info', async (req, res) => {
       return res.status(401).json({ error: 'No token provided' });
     }
 
+    // Check if Firebase Admin is initialized
+    if (!admin.apps.length) {
+      console.error('❌ Firebase Admin not initialized - cannot verify token');
+      return res.status(500).json({
+        error: 'Authentication service unavailable',
+        code: 'AUTH_SERVICE_ERROR'
+      });
+    }
+
     // Verify Firebase token
     const decodedToken = await admin.auth().verifyIdToken(token);
 
@@ -260,6 +281,15 @@ router.get('/user', async (req, res) => {
     if (!token) {
       console.log('❌ /user endpoint: No token provided');
       return res.status(401).json({ error: 'No token provided' });
+    }
+
+    // Check if Firebase Admin is initialized
+    if (!admin.apps.length) {
+      console.error('❌ Firebase Admin not initialized - cannot verify token');
+      return res.status(500).json({
+        error: 'Authentication service unavailable',
+        code: 'AUTH_SERVICE_ERROR'
+      });
     }
 
     console.log('🔍 /user endpoint: Verifying token...');

@@ -15,7 +15,7 @@ console.log('🔍 Final connection string:', MONGO_URI.substring(0, 50) + '...')
 const connectDB = async () => {
   try {
     await mongoose.connect(MONGO_URI);
-    console.log('MongoDB connected');
+    console.log('✅ MongoDB connected successfully');
 
     // Clean up any existing game sessions with schema issues
     try {
@@ -32,8 +32,15 @@ const connectDB = async () => {
       console.log('🧹 Schema cleanup completed (no existing sessions or already clean)');
     }
   } catch (err) {
-    console.error('MongoDB connection error:', err);
-    process.exit(1);
+    console.error('❌ MongoDB connection error:', err.message);
+
+    // In development, continue without database for testing frontend
+    if (process.env.NODE_ENV === 'development') {
+      console.log('⚠️ Running in development mode without database');
+      console.log('⚠️ Database-dependent features will not work');
+    } else {
+      process.exit(1);
+    }
   }
 };
 
