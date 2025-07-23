@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: skysurge-backend
+    name: skysurge
     env: node
     plan: free
     buildCommand: cd backend && npm install
