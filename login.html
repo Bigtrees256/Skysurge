@@ -197,6 +197,11 @@
             <div class="register-link">
                 Don't have an account? <a href="register.html">Register here</a>
             </div>
+
+            <!-- Sign Out Button (hidden by default) -->
+            <button id="signOutBtn" class="btn" style="display: none; background: #dc3545; margin-top: 15px;">
+                Sign Out Current User
+            </button>
         </div>
     </div>
 
@@ -254,15 +259,59 @@
                     const token = await user.getIdToken();
                     localStorage.setItem('authToken', token);
                     console.log('✅ Token stored for existing user');
+
+                    // Check backend to see if user is properly set up
+                    console.log('🔍 Checking backend user status...');
+                    try {
+                        const apiUrl = window.AppConfig ? `${window.AppConfig.apiBaseUrl}/api/auth/user` : 'http://localhost:3000/api/auth/user';
+                        const backendResponse = await fetch(apiUrl, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+
+                        if (!backendResponse.ok) {
+                            const errorData = await backendResponse.json();
+                            if (errorData.code === 'USERNAME_REQUIRED') {
+                                console.log('🔄 Username setup required, redirecting to setup...');
+                                showMessage('Please set up your username to continue...', 'info');
+                                setTimeout(() => {
+                                    window.location.href = 'setup-username.html';
+                                }, 1000);
+                                return;
+                            }
+                        } else {
+                            const userData = await backendResponse.json();
+                            if (userData.user.needsUsername) {
+                                console.log('🔄 User needs username setup, redirecting to setup...');
+                                showMessage('Please set up your username to continue...', 'info');
+                                setTimeout(() => {
+                                    window.location.href = 'setup-username.html';
+                                }, 1000);
+                                return;
+                            }
+                        }
+
+                        // User is fully set up, redirect to game
+                        console.log('✅ User is fully set up, redirecting to game...');
+                        showMessage('Already logged in! Redirecting...', 'success');
+                        setTimeout(() => {
+                            window.location.href = 'index.html';
+                        }, 1000);
+
+                    } catch (backendError) {
+                        console.warn('Backend check failed, redirecting to setup:', backendError);
+                        showMessage('Please set up your username to continue...', 'info');
+                        setTimeout(() => {
+                            window.location.href = 'setup-username.html';
+                        }, 1000);
+                        return;
+                    }
+
                 } catch (error) {
                     console.error('❌ Failed to store token:', error);
+                    showMessage('Authentication error. Please try logging in again.', 'error');
                 }
-
-                showMessage('Already logged in! Redirecting...', 'success');
-                setTimeout(() => {
-                    console.log('🔄 Redirecting to game...');
-                    window.location.href = 'index.html';
-                }, 1000);
             } else {
                 console.log('❌ No user logged in, showing login form');
                 // User needs to log in - login form is already visible
@@ -366,6 +415,32 @@
                 showLoading(false);
                 console.error('Google login error:', error);
                 showMessage('Google login failed: ' + error.message);
+            }
+        });
+
+        // Sign out button functionality
+        const signOutBtn = document.getElementById('signOutBtn');
+        signOutBtn.addEventListener('click', async () => {
+            try {
+                await firebase.auth().signOut();
+                localStorage.removeItem('authToken');
+                sessionStorage.removeItem('authToken');
+                console.log('✅ User signed out successfully');
+                showMessage('Signed out successfully!', 'success');
+                signOutBtn.style.display = 'none';
+                loginForm.style.display = 'block';
+            } catch (error) {
+                console.error('❌ Sign out error:', error);
+                showMessage('Sign out failed: ' + error.message, 'error');
+            }
+        });
+
+        // Show sign out button if user is logged in
+        firebase.auth().onAuthStateChanged((user) => {
+            if (user) {
+                signOutBtn.style.display = 'block';
+            } else {
+                signOutBtn.style.display = 'none';
             }
         });
     </script>
