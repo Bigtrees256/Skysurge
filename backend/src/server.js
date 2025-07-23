@@ -21,7 +21,8 @@ const adsRoutes = require('./routes/ads');
 const referralRoutes = require('./routes/referrals');
 
 // Import middleware
-const { rateLimit } = require('./middleware/auth');
+const { authenticateToken, optionalAuth } = require('./middleware/auth');
+const { apiLimiter } = require('./middleware/rateLimit');
 const requestLogger = require('./middleware/requestLogger');
 
 const app = express();
@@ -109,7 +110,7 @@ connectDB();
 
 // Rate limiting - enabled for production
 if (process.env.NODE_ENV === 'production') {
-  app.use(rateLimit());
+  app.use(apiLimiter);
   console.log('✅ Rate limiting enabled for production');
 } else {
   console.log('⚠️  Rate limiting disabled for development');
