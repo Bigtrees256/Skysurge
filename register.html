@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://js.stripe.com https://accounts.google.com; connect-src 'self' https://api.stripe.com https://accounts.google.com https://oauth2.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; frame-src 'self' https://accounts.google.com;">
     <title>Register - SkySurge</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     
     <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     
     <style>
         * {
@@ -46,16 +45,25 @@
         
         .form-group {
             margin-bottom: 20px;
+            text-align: left;
         }
         
-        input {
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.7rem;
+            color: #555;
+        }
+        
+        input[type="email"],
+        input[type="password"],
+        input[type="text"] {
             width: 100%;
             padding: 12px;
             border: 2px solid #ddd;
             border-radius: 8px;
-            font-family: inherit;
             font-size: 0.8rem;
-            transition: border-color 0.3s;
+            font-family: Arial, sans-serif;
         }
         
         input:focus {
@@ -65,14 +73,14 @@
         
         .btn {
             width: 100%;
-            padding: 12px;
+            padding: 15px;
             border: none;
             border-radius: 8px;
-            font-family: inherit;
             font-size: 0.8rem;
+            font-family: 'Press Start 2P', monospace;
             cursor: pointer;
-            transition: all 0.3s;
             margin-bottom: 15px;
+            transition: all 0.3s ease;
         }
         
         .btn-primary {
@@ -82,72 +90,66 @@
         
         .btn-primary:hover {
             background: #5a6fd8;
+            transform: translateY(-2px);
         }
         
         .btn-google {
-            background: white;
-            color: #333;
-            border: 2px solid #ddd;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
+            background: #4285f4;
+            color: white;
         }
         
         .btn-google:hover {
-            border-color: #667eea;
-        }
-        
-        .google-icon {
-            width: 18px;
-            height: 18px;
-        }
-        
-        .divider {
-            margin: 20px 0;
-            border-top: 1px solid #ddd;
-            position: relative;
-        }
-        
-        .divider::after {
-            content: 'OR';
-            background: white;
-            padding: 0 10px;
-            position: absolute;
-            top: -10px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 0.7rem;
-            color: #666;
+            background: #357ae8;
+            transform: translateY(-2px);
         }
         
         .message {
             padding: 10px;
             border-radius: 5px;
             margin-bottom: 15px;
-            font-size: 0.7rem;
+            font-size: 0.6rem;
+            display: none;
         }
         
-        .error {
-            background: #ffebee;
-            color: #c62828;
-            border: 1px solid #ffcdd2;
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
         }
         
-        .success {
-            background: #e8f5e8;
-            color: #2e7d32;
-            border: 1px solid #c8e6c9;
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
         }
         
-        .loading {
-            opacity: 0.6;
-            pointer-events: none;
+        .divider {
+            margin: 20px 0;
+            text-align: center;
+            position: relative;
+            font-size: 0.6rem;
+            color: #666;
+        }
+        
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #ddd;
+        }
+        
+        .divider span {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 0 15px;
         }
         
         .login-link {
             margin-top: 20px;
-            font-size: 0.7rem;
+            font-size: 0.6rem;
+            color: #666;
         }
         
         .login-link a {
@@ -158,180 +160,60 @@
         .login-link a:hover {
             text-decoration: underline;
         }
-
-        .username-error {
-            color: #dc3545;
-            font-size: 12px;
-            margin-top: 5px;
-        }
-
-        .form-group input.valid {
-            border-color: #28a745 !important;
-        }
-
-        .form-group input.invalid {
-            border-color: #dc3545 !important;
-        }
-
-        .warning {
-            background: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeaa7;
-        }
-
-        .terms-checkbox {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            margin-bottom: 20px;
-            font-size: 0.6rem;
-            line-height: 1.4;
-        }
-
-        .terms-checkbox input[type="checkbox"] {
-            width: auto;
-            margin: 0;
-            flex-shrink: 0;
-            margin-top: 2px;
-        }
-
-        .terms-checkbox label {
-            cursor: pointer;
-            text-align: left;
-        }
-
-        .terms-checkbox a {
+        
+        #loadingMessage {
+            display: none;
             color: #667eea;
-            text-decoration: none;
+            font-size: 0.7rem;
+            margin-bottom: 15px;
         }
-
-        .terms-checkbox a:hover {
-            text-decoration: underline;
-        }
-
-        .btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-
-        .btn:disabled:hover {
-            background: #ccc;
+        
+        .username-hint {
+            font-size: 0.5rem;
+            color: #666;
+            margin-top: 5px;
         }
     </style>
 </head>
 <body>
     <div class="register-container">
-        <h1>🚀 SkySurge</h1>
-
-        <div id="referralInfo" style="display: none; background: #e8f5e8; border: 1px solid #4caf50; border-radius: 8px; padding: 15px; margin-bottom: 20px; color: #2e7d32;">
-            <div style="font-weight: bold; margin-bottom: 5px;">🎉 You've been invited!</div>
-            <div>Referred by: <span id="referrerName" style="font-weight: bold;"></span></div>
-            <div style="font-size: 14px; margin-top: 5px;">Both you and your friend will get 5 bonus attempts when you sign up!</div>
-        </div>
-
-        <div id="loadingMessage" style="display: block; color: #667eea;">
-            Checking authentication...
-        </div>
+        <h1>🚀 Join SkySurge</h1>
         
-        <div id="registerForm" style="display: none;">
-            <!-- Email/Password Registration -->
+        <div id="loadingMessage">Creating account...</div>
+        <div id="message" class="message"></div>
+        
+        <div id="registerForm">
+            <!-- Email Registration -->
             <form id="emailRegisterForm">
                 <div class="form-group">
-                    <input type="text" id="usernameInput" placeholder="Username" required>
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" required minlength="3" maxlength="20">
+                    <div class="username-hint">3-20 characters, letters, numbers, _ and - only</div>
                 </div>
                 <div class="form-group">
-                    <input type="email" id="emailInput" placeholder="Email" required>
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" required>
                 </div>
                 <div class="form-group">
-                    <input type="password" id="passwordInput" placeholder="Password" required>
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" required minlength="6">
                 </div>
                 <div class="form-group">
-                    <input type="password" id="confirmPasswordInput" placeholder="Confirm Password" required>
+                    <label for="confirmPassword">Confirm Password:</label>
+                    <input type="password" id="confirmPassword" required minlength="6">
                 </div>
-
-                <!-- Terms of Service and Privacy Policy Agreement -->
-                <div class="terms-checkbox">
-                    <input type="checkbox" id="termsCheckbox" required>
-                    <label for="termsCheckbox">
-                        I agree to the <a href="terms-of-service.html" target="_blank">Terms of Service</a>
-                        and <a href="#" onclick="showPrivacyModal(); return false;">Privacy Policy</a>
-                    </label>
-                </div>
-
-                <button type="submit" class="btn btn-primary" id="createAccountBtn" disabled>Create Account</button>
+                <button type="submit" class="btn btn-primary">Create Account</button>
             </form>
             
-            <div class="divider"></div>
+            <div class="divider"><span>OR</span></div>
             
             <!-- Google Registration -->
             <button id="googleRegisterBtn" class="btn btn-google">
-                <svg class="google-icon" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-                Sign up with Google
+                🔍 Sign up with Google
             </button>
             
-            <div id="message"></div>
-            
             <div class="login-link">
-                Already have an account? <a href="login.html">Login here</a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Privacy Policy Modal -->
-    <div id="privacyModal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
-        <div class="modal-content" style="background-color: #fff; margin: 5% auto; padding: 20px; border: 2px solid #222; border-radius: 8px; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; font-family: 'Press Start 2P', monospace;">
-            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #222;">
-                <h2 class="modal-title" style="color: #222; font-size: 1.2rem; margin: 0; text-transform: uppercase;">Privacy Policy</h2>
-                <button class="close" onclick="closePrivacyModal()" style="color: #222; font-size: 1.5rem; font-weight: bold; cursor: pointer; background: none; border: none; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">&times;</button>
-            </div>
-            <div class="modal-body" style="font-size: 0.6rem; line-height: 1.6; color: #222; text-align: left;">
-                <p><strong>Effective Date:</strong> January 1, 2024</p>
-                <p><strong>Platform:</strong> SkySurge</p>
-
-                <h2 style="font-size: 0.8rem; margin: 20px 0 10px 0; text-transform: uppercase;">1. Data We Collect</h2>
-                <ul style="margin: 8px 0; padding-left: 20px;">
-                    <li style="margin: 4px 0;">Username and email address for account creation</li>
-                    <li style="margin: 4px 0;">Game scores and statistics</li>
-                    <li style="margin: 4px 0;">Payment information (processed securely by Stripe)</li>
-                    <li style="margin: 4px 0;">Basic usage analytics to improve the game</li>
-                </ul>
-
-                <h2 style="font-size: 0.8rem; margin: 20px 0 10px 0; text-transform: uppercase;">2. How We Use Your Data</h2>
-                <ul style="margin: 8px 0; padding-left: 20px;">
-                    <li style="margin: 4px 0;">To provide and maintain the game service</li>
-                    <li style="margin: 4px 0;">To process payments and manage your account</li>
-                    <li style="margin: 4px 0;">To display leaderboards and track progress</li>
-                    <li style="margin: 4px 0;">To communicate important updates</li>
-                    <li style="margin: 4px 0;">To prevent fraud and ensure fair play</li>
-                </ul>
-
-                <h2 style="font-size: 0.8rem; margin: 20px 0 10px 0; text-transform: uppercase;">3. Third-Party Services</h2>
-                <p style="margin: 8px 0;">We use the following trusted services:</p>
-                <ul style="margin: 8px 0; padding-left: 20px;">
-                    <li style="margin: 4px 0;">Firebase for authentication</li>
-                    <li style="margin: 4px 0;">Stripe for payment processing</li>
-                    <li style="margin: 4px 0;">MongoDB Atlas for data storage</li>
-                </ul>
-                <p style="margin: 8px 0;">These services may collect limited data in accordance with their own privacy policies.</p>
-
-                <h2 style="font-size: 0.8rem; margin: 20px 0 10px 0; text-transform: uppercase;">4. Data Security</h2>
-                <p style="margin: 8px 0;">We implement industry-standard security measures to protect your data, including encryption and secure authentication.</p>
-
-                <h2 style="font-size: 0.8rem; margin: 20px 0 10px 0; text-transform: uppercase;">5. Your Rights</h2>
-                <ul style="margin: 8px 0; padding-left: 20px;">
-                    <li style="margin: 4px 0;">Access your personal data</li>
-                    <li style="margin: 4px 0;">Request data correction or deletion</li>
-                    <li style="margin: 4px 0;">Withdraw consent at any time</li>
-                </ul>
-
-                <h2 style="font-size: 0.8rem; margin: 20px 0 10px 0; text-transform: uppercase;">6. Contact Us</h2>
-                <p style="margin: 8px 0;">For privacy-related questions, contact us at: <strong>privacy@skysurge.com</strong></p>
+                Already have an account? <a href="login.html">Sign in here</a>
             </div>
         </div>
     </div>
@@ -340,24 +222,10 @@
     <script src="js/config.js"></script>
 
     <script>
-        console.log('🔧 Register page loaded - Auth Fix Version 2.0');
+        console.log('🔧 SkySurge Register - Clean Version');
 
-        // Firebase Configuration from centralized config
-        const firebaseConfig = window.AppConfig.firebaseConfig;
-        
         // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-
-        // Extract referral parameter from URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const referrerUsername = urlParams.get('ref');
-
-        // Show referral info if present
-        if (referrerUsername) {
-            console.log('🔗 Referral detected from:', referrerUsername);
-            // Store referrer username for later use during registration
-            sessionStorage.setItem('referrerUsername', referrerUsername);
-        }
+        firebase.initializeApp(window.AppConfig.firebaseConfig);
 
         // DOM elements
         const loadingMessage = document.getElementById('loadingMessage');
@@ -365,232 +233,50 @@
         const messageDiv = document.getElementById('message');
         const emailForm = document.getElementById('emailRegisterForm');
         const googleBtn = document.getElementById('googleRegisterBtn');
-        
-        let authStateChecked = false;
-        let redirectHandled = false;
-        
+
         // Show/hide loading
         function showLoading(show) {
             loadingMessage.style.display = show ? 'block' : 'none';
             registerForm.style.display = show ? 'none' : 'block';
         }
-        
+
         // Show message
         function showMessage(text, type = 'error') {
             messageDiv.textContent = text;
             messageDiv.className = `message ${type}`;
             messageDiv.style.display = 'block';
         }
-        
+
         // Clear message
         function clearMessage() {
             messageDiv.style.display = 'none';
         }
 
-        // Show referral info if present
-        function showReferralInfo() {
-            const referrerUsername = sessionStorage.getItem('referrerUsername');
-            if (referrerUsername) {
-                const referralInfo = document.getElementById('referralInfo');
-                const referrerName = document.getElementById('referrerName');
-                referrerName.textContent = referrerUsername;
-                referralInfo.style.display = 'block';
+        // Validate username
+        function validateUsername(username) {
+            if (username.length < 3 || username.length > 20) {
+                return 'Username must be between 3 and 20 characters';
             }
-        }
-
-        // Process referral after successful registration
-        async function processReferral(user) {
-            const referrerUsername = sessionStorage.getItem('referrerUsername');
-            if (!referrerUsername) {
-                console.log('No referral to process');
-                return;
-            }
-
-            try {
-                console.log('🔗 Processing referral for:', referrerUsername);
-
-                // Get Firebase token for authentication
-                const token = await user.getIdToken();
-
-                const apiUrl = window.AppConfig ? `${window.AppConfig.apiBaseUrl}/api/referrals/process` : 'http://localhost:3000/api/referrals/process';
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        referrerUsername: referrerUsername
-                    })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    console.log('✅ Referral processed successfully:', data);
-                    // Clear the referral from session storage
-                    sessionStorage.removeItem('referrerUsername');
-
-                    // Show success message about bonus attempts
-                    showMessage(`Registration successful! You and ${referrerUsername} both received ${data.referral.attemptsGranted} bonus attempts!`, 'success');
-                } else {
-                    console.log('⚠️ Referral processing failed:', data.error);
-                    // Don't show error to user, just log it
-                }
-
-            } catch (error) {
-                console.error('❌ Error processing referral:', error);
-                // Don't show error to user, just log it
-            }
-        }
-        
-        // Handle redirect result first (for Google sign-in)
-        async function handleRedirectResult() {
-            try {
-                console.log('🔍 Checking for Google redirect result...');
-                const result = await firebase.auth().getRedirectResult();
-                redirectHandled = true;
-
-                if (result.user) {
-                    console.log('✅ Google registration successful:', result.user.email);
-
-                    // Store token immediately
-                    const token = await result.user.getIdToken();
-                    localStorage.setItem('authToken', token);
-                    console.log('✅ Token stored after Google registration');
-
-                    // Always redirect to username setup for Google users
-                    showMessage('Google registration successful! Please set up your username to continue.', 'success');
-                    setTimeout(() => {
-                        window.location.href = 'setup-username.html';
-                    }, 1500);
-                } else {
-                    console.log('🔍 No redirect result found');
-                    // Check current auth state
-                    checkAuthState();
-                }
-            } catch (error) {
-                redirectHandled = true;
-                console.error('Redirect error:', error);
-                showMessage('Registration error: ' + error.message, 'error');
-                checkAuthState();
-            }
-        }
-
-        // Initialize redirect result handling
-        document.addEventListener('DOMContentLoaded', () => {
-            handleRedirectResult();
-        });
-        
-        // Check authentication state
-        function checkAuthState() {
-            if (authStateChecked) return; // Prevent multiple checks
-            authStateChecked = true;
-            
-            firebase.auth().onAuthStateChanged((user) => {
-                showLoading(false);
-                if (user) {
-                    console.log('✅ User already logged in:', user.email);
-                    // Add delay to prevent rapid redirects
-                    setTimeout(() => {
-                        window.location.href = 'index.html';
-                    }, 100);
-                } else {
-                    console.log('❌ No user logged in');
-                    // Show register form and referral info if present
-                    showReferralInfo();
-                }
-            });
-        }
-        
-        // Username validation function
-        async function validateUsername(username) {
-            if (!username || username.length < 3 || username.length > 20) {
-                return { valid: false, error: 'Username must be between 3 and 20 characters' };
-            }
-
             if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-                return { valid: false, error: 'Username can only contain letters, numbers, underscores, and hyphens' };
+                return 'Username can only contain letters, numbers, _ and -';
             }
-
-            try {
-                const apiUrl = window.AppConfig ? `${window.AppConfig.apiBaseUrl}/api/auth/check-username/${encodeURIComponent(username)}` : `http://localhost:3000/api/auth/check-username/${encodeURIComponent(username)}`;
-                const response = await fetch(apiUrl);
-                const data = await response.json();
-
-                if (!data.available) {
-                    return { valid: false, error: data.error || 'Username is not available' };
-                }
-
-                return { valid: true };
-            } catch (error) {
-                console.error('Username validation error:', error);
-                return { valid: false, error: 'Unable to validate username. Please try again.' };
-            }
+            return null;
         }
-
-        // Real-time username validation
-        const usernameInput = document.getElementById('usernameInput');
-        let usernameTimeout;
-
-        usernameInput.addEventListener('input', () => {
-            clearTimeout(usernameTimeout);
-            const username = usernameInput.value.trim();
-
-            // Clear previous validation styling
-            usernameInput.style.borderColor = '';
-
-            if (username.length === 0) return;
-
-            usernameTimeout = setTimeout(async () => {
-                const validation = await validateUsername(username);
-
-                if (validation.valid) {
-                    usernameInput.style.borderColor = '#28a745';
-                } else {
-                    usernameInput.style.borderColor = '#dc3545';
-                    // Show error briefly
-                    const errorDiv = document.createElement('div');
-                    errorDiv.style.color = '#dc3545';
-                    errorDiv.style.fontSize = '12px';
-                    errorDiv.style.marginTop = '5px';
-                    errorDiv.textContent = validation.error;
-
-                    // Remove any existing error
-                    const existingError = usernameInput.parentNode.querySelector('.username-error');
-                    if (existingError) existingError.remove();
-
-                    errorDiv.className = 'username-error';
-                    usernameInput.parentNode.appendChild(errorDiv);
-
-                    // Remove error after 3 seconds
-                    setTimeout(() => {
-                        if (errorDiv.parentNode) errorDiv.remove();
-                    }, 3000);
-                }
-            }, 500); // Wait 500ms after user stops typing
-        });
 
         // Email/Password registration
         emailForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             clearMessage();
 
-            const username = document.getElementById('usernameInput').value.trim();
-            const email = document.getElementById('emailInput').value.trim();
-            const password = document.getElementById('passwordInput').value;
-            const confirmPassword = document.getElementById('confirmPasswordInput').value;
-            const termsAccepted = document.getElementById('termsCheckbox').checked;
+            const username = document.getElementById('username').value.trim();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
 
-            // Validate terms acceptance
-            if (!termsAccepted) {
-                showMessage('You must agree to the Terms of Service and Privacy Policy to create an account');
-                return;
-            }
-
-            // Validation
-            if (!username) {
-                showMessage('Username is required');
+            // Validate inputs
+            const usernameError = validateUsername(username);
+            if (usernameError) {
+                showMessage(usernameError);
                 return;
             }
 
@@ -599,92 +285,51 @@
                 return;
             }
 
-            if (password.length < 6) {
-                showMessage('Password must be at least 6 characters');
-                return;
-            }
-
             try {
                 showLoading(true);
+                
+                // Create Firebase user
+                const result = await firebase.auth().createUserWithEmailAndPassword(email, password);
+                console.log('✅ Firebase user created:', result.user.email);
 
-                // Validate username first
-                const usernameValidation = await validateUsername(username);
-                if (!usernameValidation.valid) {
-                    showLoading(false);
-                    showMessage(usernameValidation.error);
-                    return;
-                }
-
-                // Create user with Firebase
-                const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
-
-                // Update display name in Firebase
-                await userCredential.user.updateProfile({
-                    displayName: username
+                // Get token and register in backend
+                const token = await result.user.getIdToken();
+                
+                const response = await fetch(`${window.AppConfig.apiBaseUrl}/api/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        username,
+                        firebaseUid: result.user.uid,
+                        email: result.user.email
+                    })
                 });
 
-                // Create user in MongoDB backend
-                try {
-                    const apiUrl = window.AppConfig ? `${window.AppConfig.apiBaseUrl}/api/auth/register` : 'http://localhost:3000/api/auth/register';
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            username: username,
-                            email: email,
-                            firebaseUid: userCredential.user.uid
-                        })
-                    });
-
-                    const data = await response.json();
-
-                    if (!response.ok) {
-                        console.error('Backend registration error:', data);
-                        showMessage('Registration completed, but please set up your username to continue.', 'warning');
-                        setTimeout(() => {
-                            window.location.href = 'setup-username.html';
-                        }, 2000);
-                        return;
-                    } else {
-                        console.log('✅ User successfully created in both Firebase and backend');
-
-                        // Process referral if present
-                        await processReferral(userCredential.user);
-
-                        showMessage('Registration successful! Welcome to SkySurge!', 'success');
-                        setTimeout(() => {
-                            window.location.href = 'index.html';
-                        }, 1000);
-                    }
-                } catch (backendError) {
-                    console.error('Backend registration failed:', backendError);
-                    showMessage('Registration completed, but please set up your username to continue.', 'warning');
+                if (response.ok) {
+                    localStorage.setItem('authToken', token);
+                    showMessage('Account created successfully! Redirecting...', 'success');
                     setTimeout(() => {
-                        window.location.href = 'setup-username.html';
-                    }, 2000);
+                        window.location.href = 'index.html';
+                    }, 1000);
+                } else {
+                    const error = await response.json();
+                    showMessage(error.error || 'Registration failed');
+                    showLoading(false);
                 }
-
+                
             } catch (error) {
                 showLoading(false);
                 console.error('Registration error:', error);
                 showMessage('Registration failed: ' + error.message);
             }
         });
-        
-
 
         // Google registration
         googleBtn.addEventListener('click', async () => {
             clearMessage();
-
-            // Validate terms acceptance
-            const termsAccepted = document.getElementById('termsCheckbox').checked;
-            if (!termsAccepted) {
-                showMessage('You must agree to the Terms of Service and Privacy Policy to create an account');
-                return;
-            }
 
             try {
                 showLoading(true);
@@ -692,11 +337,8 @@
                 provider.addScope('email');
                 provider.addScope('profile');
 
-                // Use redirect for better reliability (NOT popup)
-                console.log('🔄 Using signInWithRedirect (NOT popup) for Google registration...');
-                console.log('🔧 Auth Fix Version 2.0 - Redirect method confirmed');
+                console.log('🔄 Starting Google registration...');
                 await firebase.auth().signInWithRedirect(provider);
-                // Note: Page will redirect, so code after this won't execute
 
             } catch (error) {
                 showLoading(false);
@@ -705,40 +347,27 @@
             }
         });
 
-        // Privacy Policy Modal functions
-        function showPrivacyModal() {
-            document.getElementById('privacyModal').style.display = 'block';
-        }
-
-        function closePrivacyModal() {
-            document.getElementById('privacyModal').style.display = 'none';
-        }
-
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            const privacyModal = document.getElementById('privacyModal');
-            if (event.target === privacyModal) {
-                closePrivacyModal();
+        // Handle redirect result
+        firebase.auth().getRedirectResult().then((result) => {
+            if (result.user) {
+                console.log('✅ Google registration successful:', result.user.email);
+                
+                // Store token and redirect to username setup
+                result.user.getIdToken().then((token) => {
+                    localStorage.setItem('authToken', token);
+                    showMessage('Google account connected! Setting up username...', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'setup-username.html';
+                    }, 1000);
+                });
             }
-        }
-
-        // Terms checkbox validation
-        document.addEventListener('DOMContentLoaded', function() {
-            const termsCheckbox = document.getElementById('termsCheckbox');
-            const createAccountBtn = document.getElementById('createAccountBtn');
-            const googleRegisterBtn = document.getElementById('googleRegisterBtn');
-
-            // Enable/disable buttons based on checkbox state
-            termsCheckbox.addEventListener('change', function() {
-                const isChecked = this.checked;
-                createAccountBtn.disabled = !isChecked;
-                googleRegisterBtn.disabled = !isChecked;
-            });
-
-            // Ensure buttons start disabled
-            createAccountBtn.disabled = !termsCheckbox.checked;
-            googleRegisterBtn.disabled = !termsCheckbox.checked;
+        }).catch((error) => {
+            console.error('Redirect result error:', error);
+            showMessage('Authentication error: ' + error.message);
         });
+
+        // Show register form immediately
+        showLoading(false);
     </script>
 </body>
 </html>

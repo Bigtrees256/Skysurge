@@ -4,155 +4,116 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Setup Username - SkySurge</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     
     <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
-
-    <!-- Configuration -->
-    <script src="js/config.js?v=auth-fix-3"></script>
-    <script src="js/AuthManager.js?v=auth-fix-3"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Press Start 2P', monospace;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            color: #333;
         }
         
         .setup-container {
-            background: white;
+            background: rgba(255, 255, 255, 0.95);
             padding: 40px;
             border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            max-width: 500px;
-            width: 90%;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
             text-align: center;
+            max-width: 400px;
+            width: 90%;
         }
         
         h1 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 2rem;
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
         }
         
-        .subtitle {
+        .welcome-text {
+            font-size: 0.6rem;
             color: #666;
             margin-bottom: 30px;
-            font-size: 1rem;
-        }
-        
-        .user-info {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 30px;
-            text-align: left;
-        }
-        
-        .user-info h3 {
-            margin: 0 0 10px 0;
-            color: #495057;
-        }
-        
-        .user-info p {
-            margin: 5px 0;
-            color: #6c757d;
+            line-height: 1.5;
         }
         
         .form-group {
-            margin: 20px 0;
+            margin-bottom: 20px;
             text-align: left;
         }
         
-        .form-group label {
+        label {
             display: block;
             margin-bottom: 8px;
-            font-weight: 600;
-            color: #495057;
+            font-size: 0.7rem;
+            color: #555;
         }
         
-        .form-group input {
+        input[type="text"] {
             width: 100%;
-            padding: 15px;
-            border: 2px solid #e9ecef;
+            padding: 12px;
+            border: 2px solid #ddd;
             border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s;
-            box-sizing: border-box;
+            font-size: 0.8rem;
+            font-family: Arial, sans-serif;
         }
         
-        .form-group input:focus {
+        input[type="text"]:focus {
             outline: none;
             border-color: #667eea;
         }
         
-        .form-group input.valid {
-            border-color: #28a745;
-        }
-        
-        .form-group input.invalid {
-            border-color: #dc3545;
-        }
-        
-        .username-feedback {
-            margin-top: 8px;
-            font-size: 14px;
-            min-height: 20px;
-        }
-        
-        .username-feedback.success {
-            color: #28a745;
-        }
-        
-        .username-feedback.error {
-            color: #dc3545;
-        }
-        
-        .username-feedback.info {
-            color: #17a2b8;
-        }
-        
         .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-family: 'Press Start 2P', monospace;
+            cursor: pointer;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
             background: #667eea;
             color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background 0.3s;
-            width: 100%;
-            margin: 10px 0;
         }
         
-        .btn:hover:not(:disabled) {
+        .btn-primary:hover {
             background: #5a6fd8;
-        }
-        
-        .btn:disabled {
-            background: #6c757d;
-            cursor: not-allowed;
+            transform: translateY(-2px);
         }
         
         .btn-secondary {
             background: #6c757d;
+            color: white;
         }
         
-        .btn-secondary:hover:not(:disabled) {
+        .btn-secondary:hover {
             background: #5a6268;
+            transform: translateY(-2px);
         }
         
         .message {
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-            font-size: 14px;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 0.6rem;
+            display: none;
         }
         
         .message.success {
@@ -167,287 +128,216 @@
             border: 1px solid #f5c6cb;
         }
         
-        .loading {
-            opacity: 0.6;
-            pointer-events: none;
+        .username-hint {
+            font-size: 0.5rem;
+            color: #666;
+            margin-top: 5px;
+            line-height: 1.4;
         }
         
-        .username-rules {
-            background: #e7f3ff;
+        #loadingMessage {
+            display: none;
+            color: #667eea;
+            font-size: 0.7rem;
+            margin-bottom: 15px;
+        }
+        
+        .user-info {
+            background: #f8f9fa;
             padding: 15px;
             border-radius: 8px;
-            margin: 20px 0;
-            text-align: left;
-            font-size: 14px;
-        }
-        
-        .username-rules h4 {
-            margin: 0 0 10px 0;
-            color: #0c5460;
-        }
-        
-        .username-rules ul {
-            margin: 0;
-            padding-left: 20px;
-        }
-        
-        .username-rules li {
-            margin: 5px 0;
-            color: #0c5460;
+            margin-bottom: 20px;
+            font-size: 0.6rem;
+            color: #666;
         }
     </style>
 </head>
 <body>
     <div class="setup-container">
-        <h1>🎮 Welcome to SkySurge!</h1>
-        <p class="subtitle">Let's set up your username to get started</p>
+        <h1>🎮 Almost Ready!</h1>
         
-        <div id="loadingMessage" style="display: block;">
-            <p>Loading your account information...</p>
+        <div class="welcome-text">
+            Welcome to SkySurge! Choose a username to complete your account setup.
         </div>
         
-        <div id="setupForm" style="display: none;">
-            <div class="user-info">
-                <h3>Account Information</h3>
-                <p><strong>Email:</strong> <span id="userEmail"></span></p>
-                <p><strong>Current Display Name:</strong> <span id="currentUsername"></span></p>
-            </div>
-            
-            <div class="username-rules">
-                <h4>Username Requirements (Mandatory):</h4>
-                <ul>
-                    <li>Between 3-20 characters long</li>
-                    <li>Only letters, numbers, underscores (_), and hyphens (-)</li>
-                    <li>Must be unique (case-insensitive)</li>
-                    <li><strong>Required to access SkySurge</strong></li>
-                </ul>
-            </div>
-            
+        <div id="userInfo" class="user-info" style="display: none;">
+            <strong>Account:</strong> <span id="userEmail"></span>
+        </div>
+        
+        <div id="loadingMessage">Setting up account...</div>
+        <div id="message" class="message"></div>
+        
+        <div id="setupForm">
             <form id="usernameForm">
                 <div class="form-group">
-                    <label for="usernameInput">Choose Your Username:</label>
-                    <input type="text" id="usernameInput" placeholder="Enter your desired username" required>
-                    <div id="usernameFeedback" class="username-feedback"></div>
+                    <label for="username">Choose Your Username:</label>
+                    <input type="text" id="username" required minlength="3" maxlength="20" placeholder="Enter username">
+                    <div class="username-hint">
+                        • 3-20 characters<br>
+                        • Letters, numbers, underscore (_) and dash (-) only<br>
+                        • This will be your display name in the game
+                    </div>
                 </div>
-                
-                <button type="submit" class="btn" id="submitBtn" disabled>Set Username & Continue</button>
-                <p style="font-size: 12px; color: #666; margin-top: 10px; text-align: center;">
-                    <strong>Username setup is required to access SkySurge</strong>
-                </p>
+                <button type="submit" class="btn btn-primary">Complete Setup</button>
             </form>
             
-            <div id="message"></div>
+            <button id="logoutBtn" class="btn btn-secondary">Sign Out</button>
         </div>
     </div>
 
+    <!-- Configuration -->
+    <script src="js/config.js"></script>
+
     <script>
-        // Firebase Configuration from centralized config
-        const firebaseConfig = window.AppConfig.firebaseConfig;
+        console.log('🔧 SkySurge Username Setup');
 
         // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        
-        const API_BASE = `${window.AppConfig.apiBaseUrl}/api`;
-        
+        firebase.initializeApp(window.AppConfig.firebaseConfig);
+
         // DOM elements
         const loadingMessage = document.getElementById('loadingMessage');
         const setupForm = document.getElementById('setupForm');
-        const usernameInput = document.getElementById('usernameInput');
-        const usernameFeedback = document.getElementById('usernameFeedback');
-        const submitBtn = document.getElementById('submitBtn');
         const messageDiv = document.getElementById('message');
         const usernameForm = document.getElementById('usernameForm');
-        
-        let currentUser = null;
-        let validationTimeout;
-        let isUsernameValid = false;
-        
+        const logoutBtn = document.getElementById('logoutBtn');
+        const userInfo = document.getElementById('userInfo');
+        const userEmail = document.getElementById('userEmail');
+
         // Show/hide loading
         function showLoading(show) {
-            if (show) {
-                setupForm.classList.add('loading');
-            } else {
-                setupForm.classList.remove('loading');
-            }
+            loadingMessage.style.display = show ? 'block' : 'none';
+            setupForm.style.display = show ? 'none' : 'block';
         }
-        
+
         // Show message
         function showMessage(text, type = 'error') {
-            messageDiv.innerHTML = `<div class="message ${type}">${text}</div>`;
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
         }
-        
+
         // Clear message
         function clearMessage() {
-            messageDiv.innerHTML = '';
+            messageDiv.style.display = 'none';
         }
-        
-        // Validate username format and availability
-        async function validateUsername(username) {
-            if (!username || username.length < 3 || username.length > 20) {
-                return { valid: false, error: 'Username must be between 3 and 20 characters' };
-            }
-            
-            if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-                return { valid: false, error: 'Username can only contain letters, numbers, underscores, and hyphens' };
-            }
-            
-            try {
-                const response = await fetch(`${API_BASE}/auth/check-username/${encodeURIComponent(username)}`);
-                const data = await response.json();
-                
-                if (!data.available) {
-                    return { valid: false, error: data.error || 'Username is not available' };
-                }
-                
-                return { valid: true };
-            } catch (error) {
-                console.error('Username validation error:', error);
-                return { valid: false, error: 'Unable to validate username. Please try again.' };
-            }
-        }
-        
-        // Real-time username validation
-        usernameInput.addEventListener('input', () => {
-            clearTimeout(validationTimeout);
-            const username = usernameInput.value.trim();
-            
-            // Reset styling
-            usernameInput.className = '';
-            usernameFeedback.textContent = '';
-            usernameFeedback.className = 'username-feedback';
-            isUsernameValid = false;
-            submitBtn.disabled = true;
-            
-            if (username.length === 0) return;
-            
-            validationTimeout = setTimeout(async () => {
-                usernameFeedback.textContent = 'Checking availability...';
-                usernameFeedback.className = 'username-feedback info';
-                
-                const validation = await validateUsername(username);
-                
-                if (validation.valid) {
-                    usernameInput.className = 'valid';
-                    usernameFeedback.textContent = '✅ Username is available!';
-                    usernameFeedback.className = 'username-feedback success';
-                    isUsernameValid = true;
-                    submitBtn.disabled = false;
-                } else {
-                    usernameInput.className = 'invalid';
-                    usernameFeedback.textContent = '❌ ' + validation.error;
-                    usernameFeedback.className = 'username-feedback error';
-                    isUsernameValid = false;
-                    submitBtn.disabled = true;
-                }
-            }, 500);
-        });
-        
-        // Handle form submission
-        usernameForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            if (!isUsernameValid) {
-                showMessage('Please enter a valid username');
-                return;
-            }
-            
-            const username = usernameInput.value.trim();
-            
-            try {
-                showLoading(true);
-                clearMessage();
-                
-                const token = await currentUser.getIdToken();
-                
-                const response = await fetch(`${API_BASE}/auth/update-username`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ username })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    showMessage(`✅ Username "${username}" has been set successfully! Redirecting to game...`, 'success');
-                    setTimeout(() => {
-                        window.location.href = 'index.html';
-                    }, 2000);
-                } else {
-                    showMessage(data.error || 'Failed to set username');
-                }
-            } catch (error) {
-                console.error('Username setup error:', error);
-                showMessage('An error occurred while setting up your username. Please try again.');
-            } finally {
-                showLoading(false);
-            }
-        });
-        
 
-        
-        // Initialize page
+        // Validate username
+        function validateUsername(username) {
+            if (username.length < 3 || username.length > 20) {
+                return 'Username must be between 3 and 20 characters';
+            }
+            if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+                return 'Username can only contain letters, numbers, _ and -';
+            }
+            return null;
+        }
+
+        // Check authentication and show user info
         firebase.auth().onAuthStateChanged(async (user) => {
             if (!user) {
-                // Not logged in, redirect to login
+                console.log('❌ No user authenticated - redirecting to login');
                 window.location.href = 'login.html';
                 return;
             }
 
-            currentUser = user;
-
+            console.log('✅ User authenticated:', user.email);
+            
+            // Show user info
+            userEmail.textContent = user.email;
+            userInfo.style.display = 'block';
+            
+            // Check if user already has username
             try {
-                // Get user info from backend (this endpoint doesn't require username)
                 const token = await user.getIdToken();
-                const response = await fetch(`${API_BASE}/auth/user-info`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+                const response = await fetch(`${window.AppConfig.apiBaseUrl}/api/auth/user-info`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
 
                 if (response.ok) {
                     const userData = await response.json();
-
-                    // If user already has username, redirect to game
                     if (userData.user.hasUsername) {
-                        showMessage('You already have a username set up! Redirecting to game...', 'success');
-                        setTimeout(() => {
-                            window.location.href = 'index.html';
-                        }, 1500);
+                        console.log('✅ User already has username, redirecting to game');
+                        window.location.href = 'index.html';
                         return;
                     }
-
-                    // Display user info
-                    document.getElementById('userEmail').textContent = userData.user.email;
-                    document.getElementById('currentUsername').textContent = userData.user.displayName || 'Not set';
-
-                    // Pre-fill username input with current display name if available
-                    if (userData.user.displayName) {
-                        const cleanUsername = userData.user.displayName.replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase();
-                        if (cleanUsername.length >= 3 && cleanUsername.length <= 20) {
-                            usernameInput.value = cleanUsername;
-                            // Trigger validation
-                            usernameInput.dispatchEvent(new Event('input'));
-                        }
-                    }
-                } else {
-                    // Fallback to Firebase data
-                    document.getElementById('userEmail').textContent = user.email;
-                    document.getElementById('currentUsername').textContent = user.displayName || 'Not set';
                 }
             } catch (error) {
-                console.error('Error fetching user info:', error);
-                // Fallback to Firebase data
-                document.getElementById('userEmail').textContent = user.email;
-                document.getElementById('currentUsername').textContent = user.displayName || 'Not set';
+                console.warn('Backend check failed:', error);
             }
 
-            // Show setup form
-            loadingMessage.style.display = 'none';
-            setupForm.style.display = 'block';
+            showLoading(false);
         });
+
+        // Username form submission
+        usernameForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            clearMessage();
+
+            const username = document.getElementById('username').value.trim();
+
+            // Validate username
+            const usernameError = validateUsername(username);
+            if (usernameError) {
+                showMessage(usernameError);
+                return;
+            }
+
+            try {
+                showLoading(true);
+                
+                const user = firebase.auth().currentUser;
+                if (!user) {
+                    showMessage('Authentication error. Please sign in again.');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                const token = await user.getIdToken();
+                
+                const response = await fetch(`${window.AppConfig.apiBaseUrl}/api/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        username,
+                        firebaseUid: user.uid,
+                        email: user.email
+                    })
+                });
+
+                if (response.ok) {
+                    showMessage('Username set successfully! Redirecting to game...', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1000);
+                } else {
+                    const error = await response.json();
+                    showMessage(error.error || 'Failed to set username');
+                    showLoading(false);
+                }
+                
+            } catch (error) {
+                showLoading(false);
+                console.error('Username setup error:', error);
+                showMessage('Setup failed: ' + error.message);
+            }
+        });
+
+        // Logout button
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                await firebase.auth().signOut();
+                window.location.href = 'login.html';
+            } catch (error) {
+                console.error('Logout error:', error);
+                showMessage('Logout failed: ' + error.message);
+            }
+        });
+
+        // Show loading initially
+        showLoading(true);
     </script>
 </body>
 </html>
