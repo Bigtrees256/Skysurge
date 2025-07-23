@@ -4,11 +4,24 @@ const admin = require('firebase-admin');
 try {
   // Check if Firebase is already initialized
   if (!admin.apps.length) {
-    // For production, use environment variables instead of service account file
-    if (process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PROJECT_ID) {
-      console.log('🔧 Initializing Firebase Admin with environment variables...');
+    // Try to initialize Firebase using different methods
+    let serviceAccount = null;
 
-      const serviceAccount = {
+    // Method 1: Check for FIREBASE_SERVICE_ACCOUNT (JSON string)
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+      try {
+        console.log('🔧 Initializing Firebase Admin with FIREBASE_SERVICE_ACCOUNT...');
+        serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+        console.log('✅ Successfully parsed FIREBASE_SERVICE_ACCOUNT JSON');
+      } catch (error) {
+        console.error('❌ Failed to parse FIREBASE_SERVICE_ACCOUNT JSON:', error.message);
+      }
+    }
+
+    // Method 2: Check for individual environment variables (fallback)
+    if (!serviceAccount && process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PROJECT_ID) {
+      console.log('🔧 Initializing Firebase Admin with individual environment variables...');
+      serviceAccount = {
         type: "service_account",
         project_id: process.env.FIREBASE_PROJECT_ID,
         private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
@@ -19,21 +32,20 @@ try {
         token_uri: "https://oauth2.googleapis.com/token",
         auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs"
       };
+    }
 
+    // Initialize Firebase if we have valid service account
+    if (serviceAccount) {
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount)
       });
 
-      console.log('✅ Firebase Admin initialized successfully with environment variables');
-      console.log('📧 Project ID:', process.env.FIREBASE_PROJECT_ID);
+      console.log('✅ Firebase Admin initialized successfully');
+      console.log('📧 Project ID:', serviceAccount.project_id);
     } else {
-      console.log('⚠️  Firebase environment variables not found. Required:');
-      console.log('   - FIREBASE_PROJECT_ID');
-      console.log('   - FIREBASE_PRIVATE_KEY');
-      console.log('   - FIREBASE_CLIENT_EMAIL');
-      console.log('   - FIREBASE_PRIVATE_KEY_ID');
-      console.log('   - FIREBASE_CLIENT_ID');
-      console.log('🔍 Debug - Current Firebase env vars:');
+      console.log('⚠️  Firebase configuration not found. Checking available options:');
+      console.log('🔍 FIREBASE_SERVICE_ACCOUNT:', process.env.FIREBASE_SERVICE_ACCOUNT ? 'SET' : 'MISSING');
+      console.log('🔍 Individual Firebase env vars:');
       console.log('   - FIREBASE_PROJECT_ID:', process.env.FIREBASE_PROJECT_ID ? 'SET' : 'MISSING');
       console.log('   - FIREBASE_PRIVATE_KEY:', process.env.FIREBASE_PRIVATE_KEY ? 'SET' : 'MISSING');
       console.log('   - FIREBASE_CLIENT_EMAIL:', process.env.FIREBASE_CLIENT_EMAIL ? 'SET' : 'MISSING');
