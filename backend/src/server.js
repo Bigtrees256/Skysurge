@@ -36,8 +36,23 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://www.gstatic.com", "https://apis.google.com", "https://js.stripe.com"],
-      connectSrc: ["'self'", "https://api.stripe.com", "https://accounts.google.com", "https://oauth2.googleapis.com"],
+      scriptSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        "https://www.gstatic.com",
+        "https://apis.google.com",
+        "https://js.stripe.com",
+        "https://accounts.google.com"
+      ],
+      connectSrc: [
+        "'self'",
+        "https://api.stripe.com",
+        "https://accounts.google.com",
+        "https://oauth2.googleapis.com",
+        "https://identitytoolkit.googleapis.com",
+        "https://securetoken.googleapis.com"
+      ],
+      frameSrc: ["'self'", "https://accounts.google.com"],
       imgSrc: ["'self'", "data:", "https:"],
     },
   },
