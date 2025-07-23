@@ -50,9 +50,17 @@ app.use(helmet({
         "https://accounts.google.com",
         "https://oauth2.googleapis.com",
         "https://identitytoolkit.googleapis.com",
-        "https://securetoken.googleapis.com"
+        "https://securetoken.googleapis.com",
+        "https://skysurge-67edc.firebaseapp.com",
+        "https://*.firebaseapp.com",
+        "https://*.googleapis.com"
       ],
-      frameSrc: ["'self'", "https://accounts.google.com"],
+      frameSrc: [
+        "'self'",
+        "https://accounts.google.com",
+        "https://skysurge-67edc.firebaseapp.com",
+        "https://*.firebaseapp.com"
+      ],
       imgSrc: ["'self'", "data:", "https:"],
     },
   },

@@ -208,12 +208,14 @@
     </div>
 
     <!-- Configuration -->
-    <script src="js/config.js"></script>
+    <script src="js/config.js?v=auth-fix-2"></script>
 
     <script>
+        console.log('🔧 Login page loaded - Auth Fix Version 2.0');
+
         // Firebase Configuration from centralized config
         const firebaseConfig = window.AppConfig.firebaseConfig;
-        
+
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
 
@@ -425,8 +427,9 @@
                 provider.addScope('email');
                 provider.addScope('profile');
 
-                // Use redirect for better reliability
-                console.log('🔄 Redirecting to Google for authentication...');
+                // Use redirect for better reliability (NOT popup)
+                console.log('🔄 Using signInWithRedirect (NOT popup) for Google authentication...');
+                console.log('🔧 Auth Fix Version 2.0 - Redirect method confirmed');
                 await firebase.auth().signInWithRedirect(provider);
                 // Note: Page will redirect, so code after this won't execute
 
