@@ -167,7 +167,7 @@ app.get('/health', (req, res) => {
     },
     firebase: {
       initialized: admin.apps.length > 0,
-      projectId: process.env.FIREBASE_PROJECT_ID || 'not-set'
+      projectId: admin.apps.length > 0 ? admin.app().options.projectId : 'not-initialized'
     },
     config: {
       hasMongoUri: !!process.env.MONGODB_URI,
