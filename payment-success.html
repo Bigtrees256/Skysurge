@@ -82,10 +82,31 @@
     </div>
     
     <script>
-        // Auto-redirect after 5 seconds
-        setTimeout(() => {
-            window.location.href = 'index.html';
-        }, 5000);
+        async function grantAttemptsAfterStripe() {
+          const params = new URLSearchParams(window.location.search);
+          const sessionId = params.get('session_id');
+          const token = localStorage.getItem('authToken');
+          if (!sessionId || !token) {
+            document.getElementById('result').textContent = 'Missing session or authentication.';
+            return;
+          }
+          const res = await fetch('http://localhost:3000/api/payments/grant-attempts', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ sessionId })
+          });
+          const data = await res.json();
+          if (data.success) {
+            document.getElementById('result').textContent = data.message;
+          } else {
+            document.getElementById('result').textContent = 'Failed to grant attempts: ' + (data.error || 'Unknown error');
+          }
+        }
+        window.onload = grantAttemptsAfterStripe;
     </script>
+    <div id="result" style="margin-top:2em;font-size:1.2em;color:#333;"></div>
 </body>
 </html> 

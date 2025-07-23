@@ -65,4 +65,36 @@ Thumbs.db
 *.temp
 
 # Firebase service account key
-backend/*.json 
+backend/firebase-service-account.json
+backend/*.json
+
+# Development and test files
+test-*.html
+test-*.js
+debug-*.html
+debug-*.js
+check-*.js
+fix-*.js
+simple-*.js
+simple-*.html
+demo-*.html
+quick-*.html
+merge-*.js
+list-*.js
+cleanup-*.js
+*.bat
+start-*.js
+
+# Development documentation
+ADMIN_*.md
+ADS_*.md
+ANTI-CHEAT-*.md
+DEPLOYMENT.md
+LEADERBOARD_*.md
+MANDATORY_*.md
+PRIZE_POOL_*.md
+REAL_ADS_*.md
+SOUND_*.md
+START_*.md
+STRIPE_*.md
+USERNAME_*.md

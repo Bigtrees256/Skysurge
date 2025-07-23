@@ -1,233 +1,337 @@
 const express = require('express');
 const router = express.Router();
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
 const admin = require('firebase-admin');
+const User = require('../models/User');
 
-// Google OAuth routes
-router.get('/google', (req, res, next) => {
-  // This will be handled by passport middleware
-  next();
-});
-
-router.get('/google/callback', 
-  (req, res, next) => {
-    // This will be handled by passport middleware
-    next();
-  },
-  async (req, res) => {
-    try {
-      // Generate JWT token for the user
-      const token = jwt.sign({ 
-        userId: req.user._id, 
-        username: req.user.username 
-      }, process.env.JWT_SECRET, { expiresIn: '1h' });
-      
-      // Redirect to frontend with token
-      res.redirect(`http://localhost:8080?googleLogin=success&token=${token}`);
-    } catch (err) {
-      res.redirect('http://localhost:8080?googleLogin=error');
-    }
-  }
-);
-
-// Test endpoint to verify Firebase Admin is working
-router.get('/test-firebase', async (req, res) => {
+// Check username availability
+router.get('/check-username/:username', async (req, res) => {
   try {
-    console.log('🧪 Testing Firebase Admin...');
-    
-    // Check if admin is initialized
-    if (!admin.apps.length) {
-      return res.status(500).json({ error: 'Firebase Admin not initialized' });
+    const { username } = req.params;
+
+    // Validate username format
+    if (!username || username.length < 3 || username.length > 20) {
+      return res.status(400).json({
+        available: false,
+        error: 'Username must be between 3 and 20 characters'
+      });
     }
-    
-    console.log('✅ Firebase Admin is initialized');
-    console.log('🔧 Available apps:', admin.apps.length);
-    
-    res.json({ 
-      message: 'Firebase Admin is working',
-      apps: admin.apps.length,
-      timestamp: new Date().toISOString()
+
+    // Check for invalid characters (only allow alphanumeric, underscore, hyphen)
+    if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+      return res.status(400).json({
+        available: false,
+        error: 'Username can only contain letters, numbers, underscores, and hyphens'
+      });
+    }
+
+    // Check if username exists in database (case-insensitive)
+    const existingUser = await User.findOne({
+      username: { $regex: new RegExp(`^${username}$`, 'i') }
     });
+
+    if (existingUser) {
+      return res.json({ available: false, error: 'Username is already taken' });
+    }
+
+    res.json({ available: true });
   } catch (err) {
-    console.error('❌ Firebase test error:', err);
-    res.status(500).json({ error: err.message });
+    console.error('Username check error:', err);
+    res.status(500).json({ available: false, error: 'Server error checking username' });
   }
 });
 
-// Test endpoint to check token format
-router.get('/test-token', async (req, res) => {
+// Create user in MongoDB after Firebase registration
+router.post('/register', async (req, res) => {
+  try {
+    const { username, firebaseUid, email } = req.body;
+
+    // Validate required fields
+    if (!username || !firebaseUid || !email) {
+      return res.status(400).json({
+        error: 'Username, Firebase UID, and email are required'
+      });
+    }
+
+    // Validate username format
+    if (username.length < 3 || username.length > 20) {
+      return res.status(400).json({
+        error: 'Username must be between 3 and 20 characters'
+      });
+    }
+
+    if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+      return res.status(400).json({
+        error: 'Username can only contain letters, numbers, underscores, and hyphens'
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({
+      $or: [
+        { firebaseUid },
+        { email },
+        { username: { $regex: new RegExp(`^${username}$`, 'i') } }
+      ]
+    });
+
+    if (existingUser) {
+      if (existingUser.firebaseUid === firebaseUid) {
+        // User already exists, return existing user
+        return res.json({
+          success: true,
+          user: existingUser,
+          message: 'User already exists'
+        });
+      } else if (existingUser.username.toLowerCase() === username.toLowerCase()) {
+        return res.status(400).json({ error: 'Username is already taken' });
+      } else if (existingUser.email === email) {
+        return res.status(400).json({ error: 'Email is already registered' });
+      }
+    }
+
+    // Create new user
+    const newUser = new User({
+      username,
+      email,
+      firebaseUid,
+      isAdmin: email === 'huangjustin256@gmail.com'
+    });
+
+    await newUser.save();
+
+    console.log('✅ New user created:', { username, email, firebaseUid });
+
+    res.status(201).json({
+      success: true,
+      user: newUser,
+      message: 'User created successfully'
+    });
+
+  } catch (err) {
+    console.error('User registration error:', err);
+
+    // Handle MongoDB duplicate key errors
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyPattern)[0];
+      return res.status(400).json({
+        error: `${field.charAt(0).toUpperCase() + field.slice(1)} is already taken`
+      });
+    }
+
+    res.status(500).json({ error: 'Server error creating user' });
+  }
+});
+
+// Update username for existing user
+router.put('/update-username', async (req, res) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
-    console.log('🧪 Testing token format...');
-    console.log('🔍 Authorization header:', req.headers.authorization ? 'Present' : 'Missing');
-    console.log('🔍 Token length:', token?.length || 0);
-    console.log('🔍 Token starts with:', token?.substring(0, 20) + '...');
-    
     if (!token) {
-      return res.status(400).json({ error: 'No token provided' });
+      return res.status(401).json({ error: 'No token provided' });
     }
-    
-    res.json({ 
-      message: 'Token received',
-      tokenLength: token.length,
-      tokenStart: token.substring(0, 20) + '...',
-      timestamp: new Date().toISOString()
+
+    // Verify Firebase token
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    const { username } = req.body;
+
+    // Validate username
+    if (!username || username.length < 3 || username.length > 20) {
+      return res.status(400).json({
+        error: 'Username must be between 3 and 20 characters'
+      });
+    }
+
+    if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+      return res.status(400).json({
+        error: 'Username can only contain letters, numbers, underscores, and hyphens'
+      });
+    }
+
+    // Check if username is already taken by another user
+    const existingUser = await User.findOne({
+      username: { $regex: new RegExp(`^${username}$`, 'i') },
+      firebaseUid: { $ne: decodedToken.uid } // Exclude current user
     });
+
+    if (existingUser) {
+      return res.status(400).json({ error: 'Username is already taken' });
+    }
+
+    // Find or create user
+    let user = await User.findOne({ firebaseUid: decodedToken.uid });
+
+    if (!user) {
+      // Create new user if doesn't exist
+      user = new User({
+        username,
+        email: decodedToken.email,
+        firebaseUid: decodedToken.uid,
+        isAdmin: decodedToken.email === 'huangjustin256@gmail.com'
+      });
+    } else {
+      // Update existing user
+      user.username = username;
+    }
+
+    await user.save();
+
+    // Update Firebase displayName
+    try {
+      await admin.auth().updateUser(decodedToken.uid, {
+        displayName: username
+      });
+      console.log('✅ Updated Firebase displayName for user:', username);
+    } catch (firebaseError) {
+      console.warn('⚠️ Failed to update Firebase displayName:', firebaseError.message);
+      // Don't fail the request if Firebase update fails
+    }
+
+    res.json({
+      success: true,
+      user: {
+        uid: user.firebaseUid,
+        username: user.username,
+        email: user.email,
+        isAdmin: user.isAdmin
+      },
+      message: 'Username updated successfully'
+    });
+
   } catch (err) {
-    console.error('❌ Token test error:', err);
-    res.status(500).json({ error: err.message });
+    console.error('Update username error:', err);
+
+    if (err.code === 11000) {
+      return res.status(400).json({ error: 'Username is already taken' });
+    }
+
+    res.status(500).json({ error: 'Server error updating username' });
   }
 });
 
-// Get current user (Firebase token-based)
+// Get current user info for username setup (doesn't require username)
+router.get('/user-info', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    // Verify Firebase token
+    const decodedToken = await admin.auth().verifyIdToken(token);
+
+    // Try to get user from MongoDB first
+    let user = await User.findOne({ firebaseUid: decodedToken.uid });
+
+    if (!user) {
+      // User not found in MongoDB - return Firebase info for setup
+      return res.json({
+        user: {
+          uid: decodedToken.uid,
+          email: decodedToken.email,
+          displayName: decodedToken.name,
+          isAdmin: decodedToken.email === 'huangjustin256@gmail.com',
+          needsUsername: true,
+          hasUsername: false
+        }
+      });
+    }
+
+    // Return MongoDB user data
+    res.json({
+      user: {
+        uid: user.firebaseUid,
+        username: user.username,
+        email: user.email,
+        isAdmin: user.isAdmin,
+        needsUsername: false,
+        hasUsername: true
+      }
+    });
+  } catch (err) {
+    console.error('Auth error:', err);
+    res.status(401).json({ error: 'Invalid token', details: err.message });
+  }
+});
+
+// Get current user (Firebase token-based) - REQUIRES USERNAME
 router.get('/user', async (req, res) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
-    console.log('🔍 Auth request received');
-    console.log('🔍 Authorization header:', req.headers.authorization ? 'Present' : 'Missing');
-    console.log('🔍 Token length:', token?.length || 0);
-    
     if (!token) {
-      console.log('❌ No token provided');
       return res.status(401).json({ error: 'No token provided' });
     }
-    
-    console.log('🔍 Verifying Firebase token...');
+
     // Verify Firebase token
     const decodedToken = await admin.auth().verifyIdToken(token);
-    console.log('✅ Firebase token verified successfully');
-    console.log('🔍 User UID:', decodedToken.uid);
-    console.log('🔍 User email:', decodedToken.email);
-    
-    // Try to find user by Firebase UID first
+
+    // Try to get user from MongoDB first
     let user = await User.findOne({ firebaseUid: decodedToken.uid });
-    console.log('🔍 User found by firebaseUid:', !!user);
-    
-    // If not found, try to find by email or username
+
     if (!user) {
-      user = await User.findOne({ $or: [
-        { email: decodedToken.email },
-        { username: decodedToken.name || decodedToken.email?.split('@')[0] || 'user' }
-      ] });
-      console.log('🔍 User found by email/username:', !!user);
-      // If found, update with Firebase UID if missing
-      if (user && !user.firebaseUid) {
-        user.firebaseUid = decodedToken.uid;
-        await user.save();
-        console.log('✅ Updated user with Firebase UID');
-      }
-    }
-    
-    // If still not found, create new user
-    if (!user) {
-      console.log('🔧 Creating new user from Firebase data...');
-      user = new User({
-        username: decodedToken.name || decodedToken.email?.split('@')[0] || 'user',
-        email: decodedToken.email,
-        firebaseUid: decodedToken.uid,
-        googleId: decodedToken.provider_id === 'google.com' ? decodedToken.sub : undefined
+      // User not found in MongoDB - MUST set username before proceeding
+      return res.status(403).json({
+        error: 'Username setup required',
+        code: 'USERNAME_REQUIRED',
+        user: {
+          uid: decodedToken.uid,
+          email: decodedToken.email,
+          isAdmin: decodedToken.email === 'huangjustin256@gmail.com',
+          needsUsername: true
+        }
       });
-      await user.save();
-      console.log('✅ New user created:', user.username);
     }
-    
-    console.log('✅ Returning user data for:', user.username);
-    res.json({ 
+
+    // Return MongoDB user data
+    res.json({
       user: {
-        id: user._id,
+        uid: user.firebaseUid,
         username: user.username,
         email: user.email,
-        firebaseUid: user.firebaseUid
+        isAdmin: user.isAdmin,
+        needsUsername: false
       }
     });
   } catch (err) {
-    console.error('❌ Firebase token verification error:', err);
-    console.error('❌ Error code:', err.code);
-    console.error('❌ Error message:', err.message);
-    res.status(401).json({ error: 'Invalid token' });
+    console.error('Auth error:', err);
+    res.status(401).json({ error: 'Invalid token', details: err.message });
   }
 });
 
-// Logout (client-side token removal)
-router.post('/logout', (req, res) => {
-  res.json({ message: 'Logged out successfully' });
-});
-
-// User registration
-router.post('/register', async (req, res) => {
+// Grant admin privileges to current user (temporary endpoint for testing)
+router.post('/grant-admin', async (req, res) => {
   try {
-    const { username, password, email } = req.body;
-    
-    // Validate input
-    if (!username || username.length < 3) {
-      return res.status(400).json({ error: 'Username must be at least 3 characters long' });
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
     }
-    
-    if (password && password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters long' });
-    }
-    
-    const existingUser = await User.findOne({ 
-      $or: [{ username }, { email: email }] 
-    });
-    
-    if (existingUser) {
-      return res.status(400).json({ 
-        error: existingUser.username === username ? 'Username already exists' : 'Email already exists' 
-      });
-    }
-    
-    const hashedPassword = password ? await bcrypt.hash(password, 10) : undefined;
-    const user = new User({ username, password: hashedPassword, email });
-    await user.save();
-    
-    res.status(201).json({ message: 'User registered successfully' });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
 
-// User login
-router.post('/login', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password are required' });
-    }
-    
-    const user = await User.findOne({ username });
+    // Verify Firebase token
+    const decodedToken = await admin.auth().verifyIdToken(token);
+
+    // Find user in MongoDB
+    let user = await User.findOne({ firebaseUid: decodedToken.uid });
+
     if (!user) {
-      return res.status(400).json({ error: 'Invalid username or password' });
+      return res.status(404).json({ error: 'User not found in database' });
     }
-    
-    if (!user.password) {
-      return res.status(400).json({ error: 'This account was created with Google OAuth. Please use Google login.' });
-    }
-    
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ error: 'Invalid username or password' });
-    }
-    
-    const token = jwt.sign({ 
-      userId: user._id, 
-      username: user.username 
-    }, process.env.JWT_SECRET, { expiresIn: '24h' });
-    
-    res.json({ 
-      token,
+
+    // Grant admin privileges
+    user.isAdmin = true;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Admin privileges granted',
       user: {
-        id: user._id,
         username: user.username,
-        email: user.email
+        email: user.email,
+        isAdmin: user.isAdmin
       }
     });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+  } catch (error) {
+    console.error('Grant admin error:', error);
+    res.status(500).json({ error: 'Failed to grant admin privileges' });
   }
 });
 
-module.exports = router; 
+module.exports = router;

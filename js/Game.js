@@ -61,6 +61,9 @@ class Game {
             console.error('Game: No current scene in game loop!');
         }
         
+        // Update input manager to clear just-pressed states
+        this.inputManager.update();
+        
         // Continue the loop
         requestAnimationFrame((time) => this.gameLoop(time));
     }
@@ -128,15 +131,11 @@ class Game {
     // Initialize attempts system after all scripts are loaded
     initAttemptsSystem() {
         console.log('Initializing attempts system...');
-        console.log('AttemptsManager available:', typeof AttemptsManager !== 'undefined');
-        console.log('AttemptsUI available:', typeof AttemptsUI !== 'undefined');
         
         if (typeof AttemptsManager !== 'undefined' && typeof AttemptsUI !== 'undefined') {
             this.attemptsManager = new AttemptsManager();
             this.attemptsUI = new AttemptsUI(this.attemptsManager, this);
             console.log('Attempts system initialized successfully!');
-            console.log('AttemptsManager instance:', this.attemptsManager);
-            console.log('AttemptsUI instance:', this.attemptsUI);
             return true;
         }
         console.error('Failed to initialize attempts system - classes not found');

@@ -1,117 +1,163 @@
-# SkySurge
+# SkySurge 🦅
 
-A modern, modular flappy-style game built with HTML5 Canvas and JavaScript. Players control a character that must navigate through obstacles by flapping to gain altitude.
+A modern, full-stack arcade flying game with user authentication, leaderboards, payment processing, and anti-cheat protection. Built with HTML5 Canvas, Node.js, MongoDB, and Firebase.
 
-## 🎮 How to Play
+## 🎮 Game Features
 
-- **Controls**: Use SPACE, ARROW UP, or CLICK/TAP to make your character flap upward
-- **Objective**: Navigate through the gaps in obstacles to score points
-- **Scoring**: Gain 1 point for each obstacle pair you successfully pass
-- **Game Over**: The game ends when you hit an obstacle or go off-screen
-- **Leaderboard**: Press L during gameplay to toggle leaderboard visibility
-- **Sound**: Toggle sound effects using the sound button on the start screen
+- **Intuitive Controls**: Use SPACE, ARROW UP, or CLICK/TAP to navigate
+- **Progressive Difficulty**: Speed and gap size change as you advance
+- **Real-time Leaderboards**: Compete with players worldwide
+- **User Authentication**: Secure Firebase-based login system
+- **Attempts System**: Purchase additional attempts with Stripe integration
+- **Anti-cheat Protection**: Server-side validation and session tracking
+- **Mobile Responsive**: Optimized for both desktop and mobile devices
 
-## 🏗️ Game Architecture
+## 🏗️ Architecture
 
-The game is built using a modular scene-based architecture:
+### Frontend (Client-side)
+- **HTML5 Canvas**: Game rendering and physics
+- **Modular JavaScript**: Scene-based architecture with ES6 classes
+- **Firebase Auth**: User authentication and session management
+- **Stripe Elements**: Secure payment processing
+- **Responsive Design**: Mobile-first approach with touch controls
 
-### Core Components
+### Backend (Server-side)
+- **Node.js + Express**: RESTful API server
+- **MongoDB**: User data, scores, and game sessions
+- **Firebase Admin**: Server-side authentication verification
+- **Stripe API**: Payment processing and webhook handling
+- **Anti-cheat System**: Server-side game validation
 
+### Core Game Components
 - **Game.js**: Main game loop and scene management
-- **Scene.js**: Base scene class for all game scenes
-- **InputManager.js**: Handles keyboard, mouse, and touch input
-- **Player.js**: Player character with physics and collision detection
-- **Obstacle.js**: Obstacle system with pairs and scrolling movement
-- **SoundManager.js**: Audio system with procedural sound effects
-- **Leaderboard.js**: High score tracking with localStorage persistence
+- **AntiCheatManager.js**: Client-side session tracking
+- **AuthManager.js**: Firebase authentication wrapper
+- **PaymentManager.js**: Stripe payment integration
+- **Leaderboard.js**: Real-time score management
 
-### Game Scenes
+## 🚀 Quick Start
 
-1. **StartScene**: Welcome screen with animated title and instructions
-2. **GameScene**: Main gameplay with player, obstacles, and scoring
-3. **GameOverScene**: Final score display with restart option
+### For Players
+1. Visit the deployed game URL
+2. Create an account or sign in with Firebase
+3. Set up your username
+4. Start playing and compete on the leaderboard!
 
-### Features
+### For Developers
 
-- ✅ **Modular Design**: Easy to extend and modify
-- ✅ **Responsive Input**: Supports keyboard, mouse, and touch
-- ✅ **Progressive Difficulty**: Speed and gap size change over time
-- ✅ **Smooth Animations**: Animated UI elements and smooth gameplay
-- ✅ **Collision Detection**: Precise collision system
-- ✅ **Score Tracking**: Real-time score display
-- ✅ **Sound Effects**: Procedural audio for all game events
-- ✅ **Leaderboard System**: Persistent high score tracking
-- ✅ **High Score Notifications**: Celebrate new records
+#### Local Development
+```bash
+# Clone the repository
+git clone https://github.com/your-username/skysurge.git
+cd skysurge
 
-## 🚀 Getting Started
+# Set up backend
+cd backend
+npm install
+cp .env.example .env
+# Edit .env with your configuration
+npm start
 
-1. Open `index.html` in a modern web browser
-2. The game will automatically start with the welcome screen
-3. Click or press any action key to begin playing
-4. Try to achieve the highest score possible!
+# Open frontend
+# Navigate to http://localhost:3000 in your browser
+```
 
-## 🎯 Game Mechanics
+#### Production Deployment
+See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for detailed deployment instructions.
 
-### Player Physics
-- Gravity affects the player continuously
-- Flapping provides upward velocity
-- Maximum fall speed is limited for playability
+## 🔧 Technical Stack
 
-### Obstacle System
-- Obstacles spawn at regular intervals
-- Each obstacle pair has a random gap position
-- Gap size decreases as score increases
-- Speed increases over time for progressive difficulty
+### Frontend Technologies
+- **HTML5 Canvas**: Game rendering and physics
+- **Vanilla JavaScript**: ES6+ with modular architecture
+- **Firebase SDK**: Authentication and real-time features
+- **Stripe Elements**: Secure payment forms
+- **CSS3**: Responsive design and animations
 
-### Scoring System
-- 1 point per obstacle pair passed
-- Score is displayed in real-time
-- Final score shown on game over screen
+### Backend Technologies
+- **Node.js**: Runtime environment
+- **Express.js**: Web framework and API server
+- **MongoDB**: NoSQL database with Mongoose ODM
+- **Firebase Admin**: Server-side authentication
+- **Stripe API**: Payment processing
+- **Helmet**: Security middleware
+- **CORS**: Cross-origin resource sharing
 
-## 🔧 Technical Details
+### Infrastructure
+- **Render**: Cloud hosting platform
+- **MongoDB Atlas**: Cloud database
+- **Firebase**: Authentication and hosting
+- **Stripe**: Payment processing
+- **GitHub**: Version control and CI/CD
 
-### Browser Compatibility
-- Modern browsers with HTML5 Canvas support
-- ES6+ JavaScript features
-- Touch support for mobile devices
+## 🛡️ Security Features
 
-### Performance
-- 60 FPS game loop using requestAnimationFrame
-- Efficient collision detection
-- Object pooling for obstacles (future enhancement)
+- **Firebase Authentication**: Secure user management
+- **JWT Tokens**: Server-side authentication verification
+- **Anti-cheat System**: Server-side game validation
+- **Rate Limiting**: API abuse prevention
+- **CORS Protection**: Cross-origin request filtering
+- **Input Validation**: Sanitized user inputs
+- **Environment Variables**: Secure credential management
 
-## 🎨 Visual Design
+## 📊 Game Features
 
-- Clean, minimalist design with simple shapes
-- Gradient backgrounds for visual appeal
-- Color-coded elements for clarity
-- Smooth animations and transitions
+### ✅ Implemented
+- User authentication and profiles
+- Real-time leaderboards
+- Payment processing (Stripe)
+- Anti-cheat protection
+- Mobile responsive design
+- Progressive difficulty
+- Sound effects and music
+- Admin dashboard
+- Prize pool system
 
-## 🔮 Future Enhancements
-
-- [x] High score persistence (localStorage)
-- [x] Sound effects and background music
-- [ ] Particle effects for collisions and scoring
+### 🔮 Future Enhancements
+- [ ] Particle effects for collisions
 - [ ] Multiple character skins
-- [x] Leaderboard integration
-- [ ] Mobile-optimized controls
 - [ ] Power-ups and special abilities
-- [ ] Different obstacle types
-- [ ] Background music tracks
-- [ ] Sound volume controls
-- [ ] Online leaderboard sharing
+- [ ] Tournament system
+- [ ] Social features and sharing
+- [ ] Achievement system
+- [ ] Replay system
 
-## 📝 Development
+## 📝 API Documentation
 
-The game is structured for easy modification and extension:
+### Authentication Endpoints
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/login` - User login
+- `GET /api/auth/user` - Get user profile
 
-- Add new scenes by extending the `Scene` class
-- Modify game mechanics in the respective component files
-- Adjust difficulty parameters in `GameScene.js`
-- Customize visuals by modifying render methods
+### Game Endpoints
+- `GET /api/scores/leaderboard` - Get top scores
+- `POST /api/scores` - Submit new score
+- `POST /api/game-sessions/start` - Start game session
+- `POST /api/game-sessions/update` - Update session data
 
-## 🎮 Enjoy Playing!
+### Payment Endpoints
+- `POST /api/payments/create-checkout-session` - Create Stripe session
+- `POST /api/payments/grant-attempts` - Grant purchased attempts
 
-SkySurge is designed to be both fun and challenging. The progressive difficulty system ensures that players of all skill levels can enjoy the game while providing a challenge for experienced players.
+## 🤝 Contributing
 
-Happy gaming! 🚀 
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🆘 Support
+
+For support, please check:
+1. [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for deployment issues
+2. GitHub Issues for bug reports
+3. API documentation for integration help
+
+---
+
+**SkySurge** - Soar to new heights! 🦅✨

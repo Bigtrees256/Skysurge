@@ -1,138 +1,191 @@
-require('dotenv').config();
 const express = require('express');
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const connectDB = require('./db');
-const passport = require('./config/passport');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 
 // Initialize Firebase Admin
-const admin = require('firebase-admin');
-
-// Load service account from environment variable
-if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-  try {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    console.log('🔧 Firebase service account loaded, initializing...');
-    console.log('📧 Project ID:', serviceAccount.project_id);
-    
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
-    });
-    console.log('✅ Firebase Admin initialized successfully');
-  } catch (error) {
-    console.error('❌ Failed to parse Firebase service account:', error);
-    console.error('🔍 Service account string length:', process.env.FIREBASE_SERVICE_ACCOUNT?.length);
-    console.error('🔍 First 100 chars:', process.env.FIREBASE_SERVICE_ACCOUNT?.substring(0, 100));
-    process.exit(1);
-  }
-} else {
-  console.error('❌ FIREBASE_SERVICE_ACCOUNT environment variable not found');
-  console.error('🔍 Available env vars:', Object.keys(process.env).filter(key => key.includes('FIREBASE')));
-  process.exit(1);
-}
+const admin = require('./firebaseAdmin');
 
 // Import routes
 const authRoutes = require('./routes/auth');
 const scoreRoutes = require('./routes/scores');
 const attemptsRoutes = require('./routes/attempts');
 const paymentRoutes = require('./routes/payments');
+const gameSessionRoutes = require('./routes/gameSessions');
+const prizePoolRoutes = require('./routes/prizePool');
+const configRoutes = require('./routes/config');
+const adsRoutes = require('./routes/ads');
+const referralRoutes = require('./routes/referrals');
 
 // Import middleware
 const { rateLimit } = require('./middleware/auth');
+const requestLogger = require('./middleware/requestLogger');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Security middleware
-app.use(helmet());
-
-// CORS configuration
-const allowedOrigins = [
-  'http://localhost:3000', 
-  'http://127.0.0.1:3000', 
-  'http://localhost:8080', 
-  'http://127.0.0.1:8080',
-  'https://skysurge-backend.onrender.com',
-  'https://skysurge.onrender.com'
-];
-
-app.use(cors({
+// Enhanced security middleware
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://www.gstatic.com", "https://js.stripe.com"],
+      connectSrc: ["'self'", "https://api.stripe.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  }
+}));
+// CORS configuration for production and development
+const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
+
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    if (isProduction) {
+      // Production: Only allow specific domains
+      const allowedOrigins = [
+        'https://skysurge-frontend.onrender.com', // Your frontend domain
+        'https://skysurge.onrender.com', // Alternative domain
+        'https://www.skysurge.com', // Custom domain if you have one
+      ];
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        console.log('❌ CORS blocked origin:', origin);
+        return callback(new Error('Not allowed by CORS'));
+      }
     } else {
-      callback(new Error('Not allowed by CORS'));
+      // Development: Allow localhost and file protocol
+      if (origin.startsWith('file://')) return callback(null, true);
+
+      if (origin.match(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/)) {
+        return callback(null, true);
+      }
+
+      const devOrigins = [
+        'http://localhost:8000', 'http://127.0.0.1:8000',
+        'http://localhost:8080', 'http://127.0.0.1:8080',
+        'http://localhost:3000', 'http://127.0.0.1:3000',
+        'http://localhost:5000', 'http://127.0.0.1:5000'
+      ];
+
+      if (devOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      console.log('❌ CORS blocked origin in dev:', origin);
+      return callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma', 'Expires'],
+  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+};
+
+app.use(cors(corsOptions));
+app.use(morgan('dev'));
+app.use(express.json());
+
+// Request logging middleware
+app.use(requestLogger);
+
+// Connect to database
+connectDB();
+
+// Rate limiting - enabled for production
+if (process.env.NODE_ENV === 'production') {
+  app.use(rateLimit());
+  console.log('✅ Rate limiting enabled for production');
+} else {
+  console.log('⚠️  Rate limiting disabled for development');
+}
+
+// API routes
+console.log('🔧 Mounting API routes...');
+app.use('/api/auth', authRoutes);
+console.log('🔧 Mounted /api/auth');
+app.use('/api/scores', scoreRoutes);
+console.log('🔧 Mounted /api/scores');
+app.use('/api/attempts', attemptsRoutes);
+console.log('🔧 Mounted /api/attempts');
+app.use('/api/payments', paymentRoutes);
+console.log('🔧 Mounted /api/payments');
+app.use('/api/prize-pool', prizePoolRoutes);
+console.log('🔧 Mounted /api/prize-pool');
+app.use('/api/game-sessions', gameSessionRoutes);
+console.log('🔧 Mounted /api/game-sessions');
+app.use('/api/config', configRoutes);
+console.log('🔧 Mounted /api/config');
+app.use('/api/ads', adsRoutes);
+console.log('🔧 Mounted /api/ads');
+app.use('/api/referrals', referralRoutes);
+console.log('🔧 Mounted /api/referrals');
+
+// Serve static files from the frontend
+const frontendPath = path.join(__dirname, '../../');
+app.use(express.static(frontendPath, {
+  maxAge: process.env.NODE_ENV === 'production' ? '1d' : '0',
+  etag: true,
+  lastModified: true
 }));
+console.log('🔧 Serving static files from:', frontendPath);
 
-// Logging middleware
-app.use(morgan('combined'));
-
-// Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Rate limiting
-app.use(rateLimit(15 * 60 * 1000, 100)); // 100 requests per 15 minutes
-
-// Initialize Passport (without sessions, using JWT)
-app.use(passport.initialize());
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
+// Serve admin pages with proper MIME types
+app.get('/admin*', (req, res) => {
+  res.sendFile(path.join(frontendPath, req.path + '.html'), (err) => {
+    if (err) {
+      res.sendFile(path.join(frontendPath, 'admin.html'));
+    }
   });
 });
 
-// API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/scores', scoreRoutes);
-app.use('/api/attempts', attemptsRoutes);
-app.use('/api/payments', paymentRoutes);
-
-// Google OAuth routes (these need to be at root level for passport)
-app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-
-app.get('/auth/google/callback', 
-  passport.authenticate('google', { failureRedirect: '/login' }),
-  async (req, res) => {
-    try {
-      const jwt = require('jsonwebtoken');
-      // Generate JWT token for the user
-      const token = jwt.sign({ 
-        userId: req.user._id, 
-        username: req.user.username 
-      }, process.env.JWT_SECRET, { expiresIn: '24h' });
-      
-      // Redirect to frontend with token
-      const redirectUrl = process.env.NODE_ENV === 'production' 
-        ? `https://skysurge-backend.onrender.com?googleLogin=success&token=${token}`
-        : `http://localhost:3000?googleLogin=success&token=${token}`;
-      res.redirect(redirectUrl);
-    } catch (err) {
-      console.error('Google OAuth callback error:', err);
-      const errorUrl = process.env.NODE_ENV === 'production'
-        ? 'https://skysurge-backend.onrender.com?googleLogin=error'
-        : 'http://localhost:3000?googleLogin=error';
-      res.redirect(errorUrl);
-    }
+// Handle SPA routing - serve index.html for non-API routes
+app.get('*', (req, res, next) => {
+  // Skip API routes
+  if (req.path.startsWith('/api/') || req.path.startsWith('/health')) {
+    return next();
   }
-);
+
+  // Serve index.html for all other routes
+  res.sendFile(path.join(frontendPath, 'index.html'));
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  const mongoose = require('mongoose');
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development',
+    database: {
+      connected: mongoose.connection.readyState === 1,
+      state: mongoose.connection.readyState
+    },
+    firebase: {
+      initialized: admin.apps.length > 0
+    }
+  });
+});
 
 // 404 handler
 app.use('*', (req, res) => {
+  console.log('❌ 404 Handler caught request:', req.method, req.originalUrl);
   res.status(404).json({
     error: 'Endpoint not found',
     path: req.originalUrl,
@@ -140,70 +193,6 @@ app.use('*', (req, res) => {
   });
 });
 
-// Global error handler
-app.use((err, req, res, next) => {
-  console.error('Global error handler:', err);
-  
-  // Mongoose validation errors
-  if (err.name === 'ValidationError') {
-    const errors = Object.values(err.errors).map(e => e.message);
-    return res.status(400).json({
-      error: 'Validation failed',
-      details: errors
-    });
-  }
-  
-  // Mongoose duplicate key errors
-  if (err.code === 11000) {
-    const field = Object.keys(err.keyValue)[0];
-    return res.status(400).json({
-      error: `${field} already exists`,
-      field: field
-    });
-  }
-  
-  // JWT errors
-  if (err.name === 'JsonWebTokenError') {
-    return res.status(401).json({
-      error: 'Invalid token'
-    });
-  }
-  
-  if (err.name === 'TokenExpiredError') {
-    return res.status(401).json({
-      error: 'Token expired'
-    });
-  }
-  
-  // Default error
-  res.status(err.status || 500).json({
-    error: err.message || 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
-});
-
-// Connect to MongoDB and start server
-connectDB()
-  .then(() => {
-    app.listen(PORT, () => {
-      console.log(`🚀 SkySurge Backend server running on port ${PORT}`);
-      console.log(`📊 Health check: http://localhost:${PORT}/health`);
-      console.log(`🔗 API base: http://localhost:${PORT}/api`);
-      console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
-    });
-  })
-  .catch((err) => {
-    console.error('Failed to connect to MongoDB:', err);
-    process.exit(1);
-  });
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully');
-  process.exit(0);
-});
-
-process.on('SIGINT', () => {
-  console.log('SIGINT received, shutting down gracefully');
-  process.exit(0);
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 }); 

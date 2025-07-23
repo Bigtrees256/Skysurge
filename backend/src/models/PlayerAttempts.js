@@ -1,16 +1,14 @@
 const mongoose = require('mongoose');
 
 const PlayerAttemptsSchema = new mongoose.Schema({
-  username: { 
-    type: String, 
-    required: true, 
-    unique: true,
+  username: {
+    type: String,
+    required: true,
     trim: true,
     maxlength: 50
   },
   userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    type: String, // Changed to String to support Firebase UIDs
     required: true
   },
   purchaseAttempts: { 
@@ -75,16 +73,45 @@ const PlayerAttemptsSchema = new mongoose.Schema({
   lastDailyReset: {
     type: Date,
     default: Date.now
+  },
+  dailyInstagramShares: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  lastInstagramShareReset: {
+    type: Date,
+    default: Date.now
+  },
+  dailyAdViews: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  lastAdViewDate: {
+    type: Date
+  },
+  dailyFreeAttemptsClaimed: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  lastFreeAttemptClaim: {
+    type: Date,
+    default: null
   }
 }, { 
   timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true },
   indexes: [
-    { username: 1 },
-    { userId: 1 },
     { lastAttemptUsed: -1 },
     { totalAttempts: -1 }
   ]
 });
+
+// Add unique index on userId to prevent duplicates (userId is unique per user)
+PlayerAttemptsSchema.index({ userId: 1 }, { unique: true });
 
 // Calculate total attempts before saving
 PlayerAttemptsSchema.pre('save', function(next) {
@@ -93,12 +120,30 @@ PlayerAttemptsSchema.pre('save', function(next) {
   // Reset daily attempts if it's a new day
   const now = new Date();
   const lastReset = this.lastDailyReset || new Date(0);
+  const lastInstagramReset = this.lastInstagramShareReset || new Date(0);
+  const lastFreeAttemptClaim = this.lastFreeAttemptClaim || new Date(0);
   
   if (now.getDate() !== lastReset.getDate() || 
       now.getMonth() !== lastReset.getMonth() || 
       now.getFullYear() !== lastReset.getFullYear()) {
     this.dailyAttemptsUsed = 0;
     this.lastDailyReset = now;
+  }
+  
+  // Reset Instagram shares if it's a new day
+  if (now.getDate() !== lastInstagramReset.getDate() || 
+      now.getMonth() !== lastInstagramReset.getMonth() || 
+      now.getFullYear() !== lastInstagramReset.getFullYear()) {
+    this.dailyInstagramShares = 0;
+    this.lastInstagramShareReset = now;
+  }
+  
+  // Reset daily free attempts if it's a new day
+  if (now.getDate() !== lastFreeAttemptClaim.getDate() || 
+      now.getMonth() !== lastFreeAttemptClaim.getMonth() || 
+      now.getFullYear() !== lastFreeAttemptClaim.getFullYear()) {
+    this.dailyFreeAttemptsClaimed = 0;
+    this.lastFreeAttemptClaim = null;
   }
   
   next();
@@ -161,6 +206,35 @@ PlayerAttemptsSchema.methods.useAttempt = function(metadata = {}) {
     amount: 1,
     timestamp: new Date(),
     metadata
+  });
+  
+  return this.save();
+};
+
+// Method to claim daily free attempt
+PlayerAttemptsSchema.methods.claimDailyFreeAttempt = function() {
+  const now = new Date();
+  const lastClaim = this.lastFreeAttemptClaim;
+  
+  // Check if already claimed today
+  if (lastClaim && 
+      now.getDate() === lastClaim.getDate() && 
+      now.getMonth() === lastClaim.getMonth() && 
+      now.getFullYear() === lastClaim.getFullYear()) {
+    throw new Error('Daily free attempt already claimed today');
+  }
+  
+  // Add free attempt
+  this.bonusAttempts += 1;
+  this.dailyFreeAttemptsClaimed += 1;
+  this.lastFreeAttemptClaim = now;
+  
+  // Add to history
+  this.attemptHistory.push({
+    type: 'bonus',
+    amount: 1,
+    timestamp: now,
+    metadata: { source: 'daily_free' }
   });
   
   return this.save();

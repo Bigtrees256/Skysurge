@@ -17,6 +17,10 @@ class InputManager {
     setupEventListeners() {
         // Keyboard events
         document.addEventListener('keydown', (e) => {
+            // Prevent default behavior for game keys
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                e.preventDefault();
+            }
             this.keys[e.code] = true;
         });
         
@@ -26,6 +30,7 @@ class InputManager {
         
         // Mouse events
         this.canvas.addEventListener('mousedown', (e) => {
+            e.preventDefault(); // Prevent default to avoid text selection
             this.mouse.pressed = true;
             this.updateMousePosition(e);
         });
@@ -52,16 +57,6 @@ class InputManager {
         // Prevent context menu on right click
         this.canvas.addEventListener('contextmenu', (e) => {
             e.preventDefault();
-        });
-        
-        // Add key for leaderboard toggle
-        document.addEventListener('keydown', (e) => {
-            if (e.code === 'KeyL') {
-                // Toggle leaderboard visibility
-                if (window.game && window.game.currentScene && window.game.currentScene.toggleLeaderboard) {
-                    window.game.currentScene.toggleLeaderboard();
-                }
-            }
         });
     }
     
@@ -100,5 +95,10 @@ class InputManager {
         this.keys = {};
         this.mouse.pressed = false;
         this.touch.pressed = false;
+    }
+    
+    // Call this at the end of each frame
+    update() {
+        // No special processing needed - Player class handles jump logic
     }
 } 

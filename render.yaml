@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: skysurge-backend
+    name: skysurge-app
     env: node
     plan: free
     buildCommand: cd backend && npm install
@@ -8,22 +8,36 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: JWT_SECRET
-        generateValue: true
-      - key: GOOGLE_CLIENT_ID
-        sync: false
-      - key: GOOGLE_CLIENT_SECRET
-        sync: false
-      - key: STRIPE_SECRET_KEY
-        sync: false
-      - key: STRIPE_WEBHOOK_SECRET
-        sync: false
+      # MongoDB Configuration
       - key: MONGODB_URI
         fromDatabase:
           name: skysurge-db
           property: connectionString
+      # Firebase Configuration (required for backend)
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY_ID
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_CLIENT_ID
+        sync: false
+      # Stripe Configuration
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      # Google OAuth (optional)
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
 
 databases:
   - name: skysurge-db
     databaseName: skysurge
-    plan: free 
+    plan: free

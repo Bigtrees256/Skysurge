@@ -4,23 +4,37 @@ class SoundManager {
         this.music = null;
         this.isMuted = false;
         this.volume = 0.7;
+        this.audioContext = null;
+        this.isInitialized = false;
         
-        this.init();
+        // Don't initialize audio context immediately - wait for user interaction
+        this.pendingInit = false;
     }
     
-    init() {
-        // Create audio context for better sound control
+    // Initialize audio context after user interaction
+    async initAudioContext() {
+        if (this.isInitialized || this.audioContext) return;
+        
         try {
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        } catch (e) {
-            console.warn('Web Audio API not supported, using fallback audio');
+            
+            // Resume the audio context if it's suspended
+            if (this.audioContext.state === 'suspended') {
+                await this.audioContext.resume();
+            }
+            
+            this.isInitialized = true;
+            this.createSounds();
+            console.log('SoundManager: Audio context initialized successfully');
+        } catch (error) {
+            console.warn('SoundManager: Failed to initialize audio context:', error);
             this.audioContext = null;
         }
-        
-        this.createSounds();
     }
     
     createSounds() {
+        if (!this.audioContext) return;
+        
         // Create sound effects using Web Audio API
         this.sounds = {
             flap: this.createFlapSound(),
@@ -104,15 +118,20 @@ class SoundManager {
         return { oscillator, gainNode };
     }
     
-    playSound(soundName) {
-        if (this.isMuted || !this.sounds[soundName]) return;
+    async playSound(soundName) {
+        if (this.isMuted) return;
         
-        const sound = this.sounds[soundName];
+        // Initialize audio context on first sound play if not already done
+        if (!this.isInitialized) {
+            await this.initAudioContext();
+        }
         
-        if (this.audioContext) {
+        if (!this.audioContext || !this.sounds[soundName]) return;
+        
+        try {
             // Resume audio context if suspended
             if (this.audioContext.state === 'suspended') {
-                this.audioContext.resume();
+                await this.audioContext.resume();
             }
             
             // Create new instances for overlapping sounds
@@ -156,6 +175,8 @@ class SoundManager {
                 newOscillator.start(time);
                 newOscillator.stop(time + 0.3);
             }
+        } catch (error) {
+            console.warn('SoundManager: Failed to play sound', soundName, error);
         }
     }
     

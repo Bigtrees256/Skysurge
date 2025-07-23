@@ -6,9 +6,24 @@ class StartScene extends Scene {
         this.animationTime = 0;
     }
     
-    enter() {
+    async enter() {
         super.enter();
         this.animationTime = 0;
+        
+        // Load attempts from backend
+        const attemptsManager = this.game.getAttemptsManager();
+        if (attemptsManager) {
+            await attemptsManager.loadAttempts();
+            const currentAttempts = attemptsManager.getAttempts();
+            console.log('[StartScene] Loaded attempts count:', currentAttempts);
+        }
+        
+        this.setupUI();
+    }
+    
+    exit() {
+        super.exit();
+        // The base class clearUI() method will handle cleanup
     }
     
     update(deltaTime) {
@@ -18,13 +33,8 @@ class StartScene extends Scene {
         if (this.inputManager.isActionPressed()) {
             const attemptsManager = this.game.getAttemptsManager();
             if (attemptsManager && attemptsManager.hasAttempts()) {
-                // Use an attempt and start game
-                attemptsManager.useAttempt().then(() => {
-                    if (this.game.getAttemptsUI()) {
-                        this.game.getAttemptsUI().updateAttemptsDisplay();
-                    }
-                    this.switchScene('game');
-                });
+                // Attempt will be consumed when game starts
+                this.switchScene('game');
             } else if (attemptsManager) {
                 // Show attempts UI
                 this.game.getAttemptsUI().show();
@@ -71,21 +81,22 @@ class StartScene extends Scene {
         ctx.fillStyle = '#666'; // Dark gray for instructions
         ctx.font = '16px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('Use SPACE, ARROW UP, or CLICK to flap', width / 2, height - 100);
-        ctx.fillText('Avoid the obstacles and get the highest score!', width / 2, height - 80);
+        ctx.fillText('Use SPACE, ARROW UP, or CLICK to jump', width / 2, height - 150);
+        ctx.fillText('Avoid the obstacles and get the highest score!', width / 2, height - 130);
         
-        // Draw attempts info
+        // Draw attempts info - use current attempts count
         const attemptsManager = this.game.getAttemptsManager();
         if (attemptsManager) {
             const attempts = attemptsManager.getAttempts();
+            console.log('[StartScene] render using attempts:', attempts, '(current count)');
             ctx.fillStyle = attempts > 0 ? '#222' : '#666'; // Monotone colors
             ctx.font = 'bold 18px Arial';
-            ctx.fillText(`Attempts: ${attempts}`, width / 2, height - 50);
+            ctx.fillText(`Attempts: ${attempts}`, width / 2, height - 100);
             
             if (attempts === 0) {
                 ctx.fillStyle = '#666';
                 ctx.font = '14px Arial';
-                ctx.fillText('Tap to get more attempts!', width / 2, height - 30);
+                ctx.fillText('Tap to get more attempts!', width / 2, height - 80);
             }
         }
         ctx.restore();
@@ -99,35 +110,40 @@ class StartScene extends Scene {
             attemptsUI.hide();
         }
         
-        // Add sound toggle button
-        const soundButton = document.createElement('button');
-        soundButton.textContent = '🔊 Sound: ON';
-        soundButton.className = 'ui-element';
-        soundButton.style.cssText = `
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            padding: 10px 15px;
-            background: rgba(255, 255, 255, 0.9);
-            border: 2px solid #333;
-            border-radius: 5px;
-            font-size: 14px;
-            cursor: pointer;
-            font-family: Arial, sans-serif;
-        `;
+
         
-        soundButton.addEventListener('click', () => {
-            const soundManager = this.game.getSoundManager();
-            const isMuted = soundManager.toggleMute();
-            soundButton.textContent = isMuted ? '🔇 Sound: OFF' : '🔊 Sound: ON';
-        });
-        
-        this.uiOverlay.appendChild(soundButton);
-        
-        // Add "Get More Attempts" button when no attempts left
-        if (attemptsManager && !attemptsManager.hasAttempts()) {
+        // Add attempts counter to Start Scene
+        if (attemptsManager) {
+            const attemptsCounter = document.createElement('div');
+            attemptsCounter.id = 'startAttemptsCounter';
+            attemptsCounter.style.cssText = `
+                position: absolute;
+                top: 20px;
+                right: 20px;
+                background: #f8f8f8;
+                color: #222;
+                padding: 12px 18px;
+                border: 2px solid #222;
+                border-radius: 0;
+                font-family: 'Press Start 2P', monospace;
+                font-weight: bold;
+                font-size: 14px;
+                z-index: 100;
+                box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.2);
+                text-transform: uppercase;
+            `;
+            
+            const updateCounter = () => {
+                const attempts = attemptsManager.getAttempts();
+                attemptsCounter.innerHTML = `🎯 Attempts: ${attempts}`;
+            };
+            
+            updateCounter();
+            this.uiOverlay.appendChild(attemptsCounter);
+            
+            // Add "Get More Attempts" button (always available)
             const attemptsButton = document.createElement('button');
-            attemptsButton.textContent = '🎯 Get More Attempts';
+            attemptsButton.textContent = attemptsManager.hasAttempts() ? '🎯 Get More Attempts' : '🎯 Get More Attempts';
             attemptsButton.className = 'ui-element';
             attemptsButton.style.cssText = `
                 position: absolute;

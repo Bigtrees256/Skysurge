@@ -1,16 +1,24 @@
 const express = require('express');
 const router = express.Router();
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+// Initialize Stripe only if API key is provided
+let stripe = null;
+if (process.env.STRIPE_SECRET_KEY) {
+    stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+} else {
+    console.log('⚠️  Stripe not configured - payment features will be disabled');
+}
+
 const { authenticateToken } = require('../middleware/auth');
 const PlayerAttempts = require('../models/PlayerAttempts');
 const User = require('../models/User');
-const verifyFirebaseToken = require('../middleware/verifyFirebaseToken');
-
-// Protect all routes with Firebase token verification
-router.use(verifyFirebaseToken);
 
 // Create payment intent for attempts purchase
 router.post('/create-payment-intent', authenticateToken, async (req, res) => {
+    if (!stripe) {
+        return res.status(503).json({ error: 'Payment system not available' });
+    }
+    
     try {
         const { amount, attempts } = req.body;
         
@@ -28,7 +36,7 @@ router.post('/create-payment-intent', authenticateToken, async (req, res) => {
             amount: Math.round(amount * 100), // Convert to cents
             currency: 'usd',
             metadata: {
-                userId: req.user._id.toString(),
+                userId: req.user.uid,
                 username: req.user.username,
                 attempts: attempts.toString(),
                 type: 'attempts_purchase'
@@ -48,6 +56,10 @@ router.post('/create-payment-intent', authenticateToken, async (req, res) => {
 
 // Confirm payment and add attempts
 router.post('/confirm-payment', authenticateToken, async (req, res) => {
+    if (!stripe) {
+        return res.status(503).json({ error: 'Payment system not available' });
+    }
+    
     try {
         const { paymentIntentId } = req.body;
         
@@ -64,7 +76,7 @@ router.post('/confirm-payment', authenticateToken, async (req, res) => {
         }
         
         // Verify the payment belongs to the authenticated user
-        if (paymentIntent.metadata.userId !== req.user._id.toString()) {
+        if (paymentIntent.metadata.userId !== req.user.uid) {
             return res.status(403).json({ error: 'Payment does not belong to user' });
         }
         
@@ -72,11 +84,11 @@ router.post('/confirm-payment', authenticateToken, async (req, res) => {
         const attemptsCount = parseInt(paymentIntent.metadata.attempts) || 3;
         
         // Add attempts to user's account
-        let attempts = await PlayerAttempts.findOne({ username: req.user.username });
+        let attempts = await PlayerAttempts.findOne({ username: req.user.username, userId: req.user.uid });
         if (!attempts) {
-            attempts = new PlayerAttempts({ 
+            attempts = new PlayerAttempts({
                 username: req.user.username,
-                userId: req.user._id 
+                userId: req.user.uid
             });
         }
         
@@ -92,16 +104,28 @@ router.post('/confirm-payment', authenticateToken, async (req, res) => {
             type: 'purchase',
             amount: attemptsCount,
             timestamp: new Date(),
-            metadata: {
-                paymentIntentId: paymentIntentId,
-                amount: paymentIntent.amount / 100, // Convert from cents
-                currency: paymentIntent.currency
-            }
+            metadata: { paymentIntentId }
         });
         
         await attempts.save();
         
-        // Return updated attempts info
+        // Add contribution to prize pool
+        try {
+            const PrizePool = require('../models/PrizePool');
+            const prizePool = await PrizePool.getMainPrizePool();
+            
+            const paymentAmount = paymentIntent.amount / 100; // Convert from cents
+            const contributionAmount = (paymentAmount * prizePool.contributionPercentage) / 100;
+            
+            await prizePool.addContribution(contributionAmount);
+            
+            console.log(`Added $${contributionAmount.toFixed(2)} to prize pool from payment ${paymentIntentId}`);
+        } catch (prizePoolError) {
+            console.error('Failed to add to prize pool:', prizePoolError);
+            // Don't fail the payment if prize pool fails
+        }
+        
+        // Return updated player view
         const playerView = {
             remainingAttempts: attempts.remainingAttempts,
             totalAttempts: attempts.totalAttempts,
@@ -157,6 +181,10 @@ router.get('/history', authenticateToken, async (req, res) => {
 
 // Webhook to handle Stripe events (for production)
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+    if (!stripe) {
+        return res.status(503).json({ error: 'Payment system not available' });
+    }
+    
     const sig = req.headers['stripe-signature'];
     let event;
     
@@ -187,7 +215,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     res.json({ received: true });
 });
 
-// Get available purchase packages
+// Get available purchase packages (no auth required)
 router.get('/packages', (req, res) => {
     const packages = [
         {
@@ -221,6 +249,88 @@ router.get('/packages', (req, res) => {
     ];
     
     res.json({ packages });
+});
+
+// Stripe Checkout for attempts purchase
+router.post('/create-checkout-session', async (req, res) => {
+  const { packageId } = req.body;
+  let lineItems = [];
+
+  // Define your packages
+  const packages = {
+    '3': { name: '3 Attempts', amount: 99, attempts: 3 },      // $0.99
+    '10': { name: '10 Attempts', amount: 200, attempts: 10 },   // $2.00
+    '30': { name: '30 Attempts', amount: 500, attempts: 30 }    // $5.00
+  };
+
+  const selected = packages[String(packageId)];
+  if (!selected) {
+    return res.status(400).json({ error: 'Invalid package selected' });
+  }
+
+  lineItems.push({
+    price_data: {
+      currency: 'usd',
+      product_data: { name: selected.name },
+      unit_amount: selected.amount,
+    },
+    quantity: 1,
+  });
+
+  try {
+    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: lineItems,
+      mode: 'payment',
+      success_url: 'http://localhost:8080/?session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: 'http://localhost:8080/',
+      metadata: { attempts: selected.attempts }
+    });
+    res.json({ url: session.url });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Grant attempts after Stripe Checkout success
+router.post('/grant-attempts', authenticateToken, async (req, res) => {
+  const { sessionId } = req.body;
+  if (!sessionId) return res.status(400).json({ error: 'Missing sessionId' });
+
+  try {
+    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    if (session.payment_status !== 'paid') {
+      return res.status(400).json({ error: 'Payment not completed' });
+    }
+
+    const attempts = parseInt(session.metadata.attempts, 10) || 0;
+    if (!attempts) return res.status(400).json({ error: 'No attempts in session' });
+
+    // Grant attempts to user using findOneAndUpdate to avoid duplicates
+    const PlayerAttempts = require('../models/PlayerAttempts');
+    const player = await PlayerAttempts.findOneAndUpdate(
+      { userId: req.user.uid }, // Find by userId (more reliable than username)
+      {
+        $inc: { purchaseAttempts: attempts },
+        $setOnInsert: {
+          username: req.user.username,
+          userId: req.user.uid
+        }
+      },
+      {
+        upsert: true,
+        new: true,
+        runValidators: true
+      }
+    );
+
+    res.json({ success: true, attempts: player.purchaseAttempts, message: `Added ${attempts} attempts!` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router; 

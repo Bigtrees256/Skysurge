@@ -8,9 +8,13 @@ const ScoreSchema = new mongoose.Schema({
     maxlength: 50
   },
   userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    type: String, // Changed to String to support Firebase UIDs
     required: true
+  },
+  gameSessionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'GameSession',
+    required: false // Optional for legacy scores
   },
   score: { 
     type: Number, 
@@ -50,23 +54,72 @@ ScoreSchema.virtual('formattedScore').get(function() {
   return this.score.toLocaleString();
 });
 
-// Static method to get leaderboard
+// Static method to get leaderboard with user lookup
 ScoreSchema.statics.getLeaderboard = function(limit = 10, page = 1) {
   const skip = (page - 1) * limit;
-  return this.find()
-    .sort({ score: -1, createdAt: -1 })
-    .limit(limit)
-    .skip(skip);
+  return this.aggregate([
+    // Group by userId to get highest score per user
+    {
+      $sort: { score: -1, createdAt: 1 }
+    },
+    {
+      $group: {
+        _id: '$userId',
+        highestScore: { $first: '$score' },
+        scoreRecord: { $first: '$$ROOT' }
+      }
+    },
+    // Lookup user information
+    {
+      $lookup: {
+        from: 'users',
+        localField: '_id',
+        foreignField: 'firebaseUid',
+        as: 'userInfo'
+      }
+    },
+    // Add computed fields
+    {
+      $addFields: {
+        displayUsername: {
+          $cond: {
+            if: { $gt: [{ $size: '$userInfo' }, 0] },
+            then: { $arrayElemAt: ['$userInfo.username', 0] },
+            else: '$scoreRecord.username'
+          }
+        },
+        score: '$highestScore'
+      }
+    },
+    { $sort: { score: -1, 'scoreRecord.createdAt': 1 } },
+    { $skip: skip },
+    { $limit: limit }
+  ]);
 };
 
-// Static method to get user's best score
-ScoreSchema.statics.getUserBest = function(username) {
-  return this.findOne({ username }).sort({ score: -1 });
+// Static method to get user's best score by userId
+ScoreSchema.statics.getUserBest = function(userId) {
+  return this.findOne({ userId }).sort({ score: -1 });
 };
 
 // Static method to get user's rank
 ScoreSchema.statics.getUserRank = function(score) {
-  return this.countDocuments({ score: { $gt: score } });
+  return this.aggregate([
+    {
+      $group: {
+        _id: '$userId',
+        highestScore: { $max: '$score' }
+      }
+    },
+    {
+      $match: {
+        highestScore: { $gt: score }
+      }
+    },
+    {
+      $count: 'rank'
+    }
+  ]);
 };
 
 module.exports = mongoose.model('Score', ScoreSchema); 
