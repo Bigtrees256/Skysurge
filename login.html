@@ -208,10 +208,11 @@
     </div>
 
     <!-- Configuration -->
-    <script src="js/config.js?v=auth-fix-2"></script>
+    <script src="js/config.js?v=auth-fix-3"></script>
+    <script src="js/AuthManager.js?v=auth-fix-3"></script>
 
     <script>
-        console.log('🔧 Login page loaded - Auth Fix Version 2.0');
+        console.log('🔧 Login page loaded - Auth Fix Version 3.0');
 
         // Firebase Configuration from centralized config
         const firebaseConfig = window.AppConfig.firebaseConfig;
@@ -229,9 +230,15 @@
         let authStateChecked = false;
         let redirectHandled = false;
 
-        // Initialize redirect result handling
-        document.addEventListener('DOMContentLoaded', () => {
-            handleRedirectResult();
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🔍 Login page: DOM loaded, initializing...');
+
+            // First check for redirect result
+            await handleRedirectResult();
+
+            // Then check if user is already logged in
+            await checkExistingAuth();
         });
         
         // Show/hide loading
@@ -251,142 +258,66 @@
         function clearMessage() {
             messageDiv.style.display = 'none';
         }
+
+        // Check if user is already authenticated
+        async function checkExistingAuth() {
+            try {
+                console.log('🔍 Login page: Checking existing auth...');
+                showLoading(true);
+
+                const user = await window.authManager.waitForAuth(5000);
+
+                if (user) {
+                    console.log('✅ Login page: User already authenticated:', user.email);
+                    showMessage('Already logged in! Redirecting...', 'success');
+
+                    // Use AuthManager to handle redirect logic
+                    const authValid = await window.authManager.checkAuthAndRedirect(true, ['login.html']);
+                    if (authValid) {
+                        setTimeout(() => {
+                            window.location.href = 'index.html';
+                        }, 1000);
+                    }
+                } else {
+                    console.log('🔍 Login page: No user authenticated, showing login form');
+                    showLoading(false);
+                }
+            } catch (error) {
+                console.log('🔍 Login page: Auth check timeout or error, showing login form');
+                showLoading(false);
+            }
+        }
         
         // Handle redirect result from Google sign-in
         async function handleRedirectResult() {
             try {
-                console.log('🔍 Checking for Google redirect result...');
+                console.log('🔍 Login page: Checking for Google redirect result...');
                 const result = await firebase.auth().getRedirectResult();
+
                 if (result.user) {
-                    console.log('✅ Google redirect login successful:', result.user.email);
+                    console.log('✅ Login page: Google redirect login successful:', result.user.email);
+                    showMessage('Google login successful! Redirecting...', 'success');
 
-                    // Store token immediately
-                    const token = await result.user.getIdToken();
-                    localStorage.setItem('authToken', token);
-                    console.log('✅ Token stored after Google redirect login');
-
-                    // Check if user needs username setup
-                    try {
-                        const backendResponse = await fetch(`${window.AppConfig.apiBaseUrl}/api/auth/user-info`, {
-                            headers: {
-                                'Authorization': `Bearer ${token}`
-                            }
-                        });
-
-                        if (backendResponse.ok) {
-                            const userData = await backendResponse.json();
-                            if (userData.user.hasUsername) {
-                                console.log('✅ User has username, redirecting to game');
-                                showMessage('Login successful! Redirecting...', 'success');
-                                setTimeout(() => {
-                                    window.location.href = 'index.html';
-                                }, 1000);
-                            } else {
-                                console.log('⚠️ User needs username setup');
-                                showMessage('Please set up your username to continue...', 'info');
-                                setTimeout(() => {
-                                    window.location.href = 'setup-username.html';
-                                }, 1000);
-                            }
-                        } else {
-                            console.log('⚠️ Backend check failed, redirecting to username setup');
-                            setTimeout(() => {
-                                window.location.href = 'setup-username.html';
-                            }, 1000);
-                        }
-                    } catch (backendError) {
-                        console.warn('Backend check failed, redirecting to setup:', backendError);
-                        setTimeout(() => {
-                            window.location.href = 'setup-username.html';
-                        }, 1000);
-                    }
-                    return;
-                } else {
-                    console.log('🔍 No redirect result found');
-                }
-            } catch (error) {
-                console.error('Redirect result error:', error);
-                showMessage('Authentication error: ' + error.message, 'error');
-            }
-        }
-
-        // Check for redirect result first
-        handleRedirectResult();
-
-        // Simplified authentication check for redirect-based login
-        console.log('🔍 Starting authentication check...');
-
-        // Check if user is already logged in
-        firebase.auth().onAuthStateChanged(async (user) => {
-            console.log('🔍 Auth state changed:', user ? user.email : 'No user');
-            showLoading(false);
-
-            if (user) {
-                console.log('✅ User already logged in:', user.email);
-
-                // Store token if not already stored
-                try {
-                    const token = await user.getIdToken();
-                    localStorage.setItem('authToken', token);
-                    console.log('✅ Token stored for existing user');
-
-                    // Check backend to see if user is properly set up
-                    console.log('🔍 Checking backend user status...');
-                    try {
-                        const apiUrl = window.AppConfig ? `${window.AppConfig.apiBaseUrl}/api/auth/user` : 'http://localhost:3000/api/auth/user';
-                        const backendResponse = await fetch(apiUrl, {
-                            headers: {
-                                'Authorization': `Bearer ${token}`
-                            }
-                        });
-
-                        if (!backendResponse.ok) {
-                            const errorData = await backendResponse.json();
-                            if (errorData.code === 'USERNAME_REQUIRED') {
-                                console.log('🔄 Username setup required, redirecting to setup...');
-                                showMessage('Please set up your username to continue...', 'info');
-                                setTimeout(() => {
-                                    window.location.href = 'setup-username.html';
-                                }, 1000);
-                                return;
-                            }
-                        } else {
-                            const userData = await backendResponse.json();
-                            if (userData.user.needsUsername) {
-                                console.log('🔄 User needs username setup, redirecting to setup...');
-                                showMessage('Please set up your username to continue...', 'info');
-                                setTimeout(() => {
-                                    window.location.href = 'setup-username.html';
-                                }, 1000);
-                                return;
-                            }
-                        }
-
-                        // User is fully set up, redirect to game
-                        console.log('✅ User is fully set up, redirecting to game...');
-                        showMessage('Already logged in! Redirecting...', 'success');
+                    // Let AuthManager handle the rest
+                    const authValid = await window.authManager.checkAuthAndRedirect(true, ['login.html']);
+                    if (authValid) {
                         setTimeout(() => {
                             window.location.href = 'index.html';
                         }, 1000);
-
-                    } catch (backendError) {
-                        console.warn('Backend check failed, redirecting to setup:', backendError);
-                        showMessage('Please set up your username to continue...', 'info');
-                        setTimeout(() => {
-                            window.location.href = 'setup-username.html';
-                        }, 1000);
-                        return;
                     }
-
-                } catch (error) {
-                    console.error('❌ Failed to store token:', error);
-                    showMessage('Authentication error. Please try logging in again.', 'error');
+                    return true;
+                } else {
+                    console.log('🔍 Login page: No redirect result found');
+                    return false;
                 }
-            } else {
-                console.log('❌ No user logged in, showing login form');
-                // User needs to log in - login form is already visible
+            } catch (error) {
+                console.error('Login page: Redirect result error:', error);
+                showMessage('Authentication error: ' + error.message, 'error');
+                return false;
             }
-        });
+        }
+
+        // Note: Auth state management is now handled by centralized AuthManager
         
         // Email/Password login
         emailForm.addEventListener('submit', async (e) => {

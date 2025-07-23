@@ -11,7 +11,28 @@ router.get('/test', (req, res) => {
     timestamp: new Date().toISOString(),
     firebase: {
       initialized: admin.apps.length > 0
-    }
+    },
+    version: 'auth-fix-3.0'
+  });
+});
+
+// Health check endpoint for authentication service
+router.get('/health', (req, res) => {
+  const mongoose = require('mongoose');
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    services: {
+      firebase: {
+        initialized: admin.apps.length > 0,
+        status: admin.apps.length > 0 ? 'connected' : 'disconnected'
+      },
+      database: {
+        connected: mongoose.connection.readyState === 1,
+        state: mongoose.connection.readyState
+      }
+    },
+    version: 'auth-fix-3.0'
   });
 });
 

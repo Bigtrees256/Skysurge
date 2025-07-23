@@ -4,6 +4,10 @@ class AuthManager {
         this.isInitialized = false;
         this.authStateListeners = [];
         this.tokenRefreshInterval = null;
+        this.authPromise = null;
+        this.authTimeout = null;
+
+        console.log('🔧 AuthManager: Initializing...');
 
         // Initialize Firebase auth state listener
         this.initAuthStateListener();
@@ -89,17 +93,85 @@ class AuthManager {
         }
     }
     
-    // Wait for authentication to be ready
-    async waitForAuth() {
+    // Wait for authentication to be ready with timeout
+    async waitForAuth(timeoutMs = 10000) {
         if (this.isInitialized) {
             return this.currentUser;
         }
-        
-        return new Promise((resolve) => {
-            this.authStateListeners.push((user) => {
+
+        // Return existing promise if already waiting
+        if (this.authPromise) {
+            return this.authPromise;
+        }
+
+        this.authPromise = new Promise((resolve, reject) => {
+            // Set timeout
+            const timeout = setTimeout(() => {
+                console.error('⚠️ AuthManager: Auth timeout after', timeoutMs, 'ms');
+                reject(new Error('Authentication timeout'));
+            }, timeoutMs);
+
+            // Listen for auth state
+            const listener = (user) => {
+                clearTimeout(timeout);
+                this.authPromise = null;
                 resolve(user);
-            });
+            };
+
+            this.authStateListeners.push(listener);
         });
+
+        return this.authPromise;
+    }
+
+    // Check authentication status and redirect if needed
+    async checkAuthAndRedirect(requiredAuth = true, allowedPages = []) {
+        try {
+            console.log('🔍 AuthManager: Checking auth status...');
+
+            const user = await this.waitForAuth();
+
+            if (!user && requiredAuth) {
+                console.log('❌ AuthManager: No user found, redirecting to login');
+                window.location.href = 'login.html';
+                return false;
+            }
+
+            if (user && requiredAuth) {
+                // Check if user needs username setup
+                try {
+                    const token = await user.getIdToken();
+                    const response = await fetch(`${window.AppConfig.apiBaseUrl}/api/auth/user-info`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+
+                    if (response.ok) {
+                        const userData = await response.json();
+                        if (!userData.user.hasUsername && !allowedPages.includes('setup-username.html')) {
+                            console.log('⚠️ AuthManager: User needs username setup');
+                            window.location.href = 'setup-username.html';
+                            return false;
+                        }
+                    }
+                } catch (error) {
+                    console.warn('⚠️ AuthManager: Backend check failed:', error);
+                    if (!allowedPages.includes('setup-username.html')) {
+                        window.location.href = 'setup-username.html';
+                        return false;
+                    }
+                }
+            }
+
+            console.log('✅ AuthManager: Auth check passed');
+            return true;
+
+        } catch (error) {
+            console.error('❌ AuthManager: Auth check failed:', error);
+            if (requiredAuth) {
+                window.location.href = 'login.html';
+            }
+            return false;
+        }
     }
     
     // Add auth state listener
