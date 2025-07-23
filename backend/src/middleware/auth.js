@@ -21,11 +21,14 @@ const authenticateToken = async (req, res, next) => {
     }
 
     // Verify Firebase token
+    console.log('🔍 Auth: Verifying Firebase token...');
     const decodedToken = await admin.auth().verifyIdToken(token);
+    console.log('✅ Auth: Firebase token verified for user:', decodedToken.email);
 
     // Check if user exists in MongoDB (username setup required)
     const User = require('../models/User');
     const user = await User.findOne({ firebaseUid: decodedToken.uid });
+    console.log('🔍 Auth: MongoDB user lookup result:', user ? 'Found' : 'Not found');
 
     if (!user) {
       return res.status(403).json({

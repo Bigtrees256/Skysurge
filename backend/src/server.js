@@ -74,22 +74,33 @@ app.use(helmet({
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('✅ CORS: Allowing request with no origin');
+      return callback(null, true);
+    }
 
     const isProduction = process.env.NODE_ENV === 'production';
+    console.log(`🔍 CORS check - Origin: ${origin}, Production: ${isProduction}`);
 
     if (isProduction) {
-      // Production: Only allow specific domains
+      // Production: Allow Render domains and common deployment patterns
       const allowedOrigins = [
+        'https://skysurge-backend.onrender.com', // Your actual backend domain
         'https://skysurge-frontend.onrender.com', // Your frontend domain
         'https://skysurge.onrender.com', // Alternative domain
         'https://www.skysurge.com', // Custom domain if you have one
       ];
 
-      if (allowedOrigins.includes(origin)) {
+      // Also allow any *.onrender.com domain for flexibility during deployment
+      const isRenderDomain = origin && origin.includes('.onrender.com');
+      const isAllowedOrigin = allowedOrigins.includes(origin);
+
+      if (isAllowedOrigin || isRenderDomain) {
+        console.log('✅ CORS allowed origin:', origin);
         return callback(null, true);
       } else {
         console.log('❌ CORS blocked origin:', origin);
+        console.log('📋 Allowed origins:', allowedOrigins);
         return callback(new Error('Not allowed by CORS'));
       }
     } else {
@@ -138,6 +149,34 @@ if (process.env.NODE_ENV === 'production') {
 } else {
   console.log('⚠️  Rate limiting disabled for development');
 }
+
+// Health check endpoint (before other routes)
+app.get('/health', (req, res) => {
+  const admin = require('firebase-admin');
+  const mongoose = require('mongoose');
+
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    database: {
+      connected: mongoose.connection.readyState === 1,
+      state: mongoose.connection.readyState
+    },
+    firebase: {
+      initialized: admin.apps.length > 0,
+      projectId: process.env.FIREBASE_PROJECT_ID || 'not-set'
+    },
+    config: {
+      hasMongoUri: !!process.env.MONGODB_URI,
+      hasFirebasePrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
+      hasFirebaseClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
+      hasFirebaseServiceAccount: !!process.env.FIREBASE_SERVICE_ACCOUNT,
+      hasStripeKey: !!process.env.STRIPE_SECRET_KEY
+    },
+    version: 'login-fix-2.0'
+  });
+});
 
 // API routes
 console.log('🔧 Mounting API routes...');

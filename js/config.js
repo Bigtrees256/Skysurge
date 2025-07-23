@@ -7,12 +7,22 @@ class Config {
 
     getApiBaseUrl() {
         // Determine API base URL based on environment
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            return 'http://localhost:3000';
+        const hostname = window.location.hostname;
+        const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+
+        let apiUrl;
+        if (isLocal) {
+            apiUrl = 'http://localhost:3000';
         } else {
             // Production: Use same origin since backend serves frontend
-            return window.location.origin;
+            apiUrl = window.location.origin;
         }
+
+        console.log('🔧 Config: API Base URL determined:', apiUrl);
+        console.log('🔧 Config: Current hostname:', hostname);
+        console.log('🔧 Config: Is local environment:', isLocal);
+
+        return apiUrl;
     }
 
     getFirebaseConfig() {
