@@ -33,6 +33,12 @@ try {
       console.log('   - FIREBASE_CLIENT_EMAIL');
       console.log('   - FIREBASE_PRIVATE_KEY_ID');
       console.log('   - FIREBASE_CLIENT_ID');
+      console.log('🔍 Debug - Current Firebase env vars:');
+      console.log('   - FIREBASE_PROJECT_ID:', process.env.FIREBASE_PROJECT_ID ? 'SET' : 'MISSING');
+      console.log('   - FIREBASE_PRIVATE_KEY:', process.env.FIREBASE_PRIVATE_KEY ? 'SET' : 'MISSING');
+      console.log('   - FIREBASE_CLIENT_EMAIL:', process.env.FIREBASE_CLIENT_EMAIL ? 'SET' : 'MISSING');
+      console.log('   - FIREBASE_PRIVATE_KEY_ID:', process.env.FIREBASE_PRIVATE_KEY_ID ? 'SET' : 'MISSING');
+      console.log('   - FIREBASE_CLIENT_ID:', process.env.FIREBASE_CLIENT_ID ? 'SET' : 'MISSING');
       console.log('⚠️  Firebase Admin not initialized');
     }
   } else {
