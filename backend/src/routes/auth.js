@@ -258,17 +258,23 @@ router.get('/user', async (req, res) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) {
+      console.log('❌ /user endpoint: No token provided');
       return res.status(401).json({ error: 'No token provided' });
     }
 
+    console.log('🔍 /user endpoint: Verifying token...');
     // Verify Firebase token
     const decodedToken = await admin.auth().verifyIdToken(token);
+    console.log('✅ /user endpoint: Token verified for user:', decodedToken.email);
 
+    console.log('🔍 /user endpoint: Looking up user in MongoDB...');
     // Try to get user from MongoDB first
     let user = await User.findOne({ firebaseUid: decodedToken.uid });
+    console.log('🔍 /user endpoint: MongoDB lookup result:', user ? `User found: ${user.username}` : 'User not found');
 
     if (!user) {
       // User not found in MongoDB - MUST set username before proceeding
+      console.log('⚠️ /user endpoint: User not found in MongoDB, requiring username setup');
       return res.status(403).json({
         error: 'Username setup required',
         code: 'USERNAME_REQUIRED',
@@ -282,6 +288,7 @@ router.get('/user', async (req, res) => {
     }
 
     // Return MongoDB user data
+    console.log('✅ /user endpoint: Returning user data for:', user.username);
     res.json({
       user: {
         uid: user.firebaseUid,
@@ -292,8 +299,14 @@ router.get('/user', async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('Auth error:', err);
-    res.status(401).json({ error: 'Invalid token', details: err.message });
+    console.error('❌ /user endpoint error:', err);
+    if (err.code === 'auth/id-token-expired') {
+      res.status(401).json({ error: 'Token expired', code: 'TOKEN_EXPIRED' });
+    } else if (err.code === 'auth/argument-error') {
+      res.status(401).json({ error: 'Invalid token format', code: 'INVALID_TOKEN' });
+    } else {
+      res.status(401).json({ error: 'Invalid token', details: err.message });
+    }
   }
 });
 
