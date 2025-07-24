@@ -656,10 +656,22 @@
         firebase.auth().getRedirectResult().then(async (result) => {
             if (result.user) {
                 console.log('✅ Google redirect login successful:', result.user.email);
+                // Show success message briefly
+                if (typeof showLoginMessage === 'function') {
+                    showLoginMessage('Google login successful! Loading game...', 'success');
+                }
                 // The auth state listener will handle the rest
+            } else if (result.credential) {
+                console.log('🔄 Google redirect completed but no user returned');
             }
         }).catch((error) => {
             console.error('❌ Google redirect login failed:', error);
+            // Show error message if login modal is visible
+            if (document.getElementById('loginModal').style.display === 'flex') {
+                if (typeof showLoginMessage === 'function') {
+                    showLoginMessage('Google login failed: ' + error.message, 'error');
+                }
+            }
         });
 
         // Initialize login modal functionality
@@ -674,29 +686,58 @@
                     provider.addScope('email');
                     provider.addScope('profile');
 
-                    // Try popup first, fallback to redirect if popup is blocked
+                    // Set custom parameters for better popup handling
+                    provider.setCustomParameters({
+                        prompt: 'select_account'
+                    });
+
+                    // Try popup first with better error handling
                     try {
+                        console.log('🔄 Attempting Google popup login...');
                         const result = await firebase.auth().signInWithPopup(provider);
-                        console.log('✅ Google login successful:', result.user.email);
+                        console.log('✅ Google popup login successful:', result.user.email);
 
                         showLoginMessage('Login successful! Loading game...', 'success');
-                        hideLoginModal();
+                        setTimeout(() => hideLoginModal(), 1000);
+
                     } catch (popupError) {
-                        if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/popup-closed-by-user') {
-                            console.log('🔄 Popup blocked, trying redirect method...');
+                        console.log('❌ Popup login failed:', popupError.code, popupError.message);
+
+                        if (popupError.code === 'auth/popup-blocked' ||
+                            popupError.code === 'auth/popup-closed-by-user' ||
+                            popupError.code === 'auth/cancelled-popup-request') {
+
+                            console.log('🔄 Popup blocked/cancelled, trying redirect method...');
                             showLoginMessage('Redirecting to Google...', 'info');
+
+                            // Use redirect as fallback
                             await firebase.auth().signInWithRedirect(provider);
+
+                        } else if (popupError.code === 'auth/network-request-failed') {
+                            showLoginMessage('Network error. Please check your connection and try again.', 'error');
                         } else {
                             throw popupError;
                         }
                     }
                 } catch (error) {
                     console.error('❌ Google login failed:', error);
-                    if (error.code === 'auth/popup-closed-by-user') {
-                        showLoginMessage('Login cancelled by user', 'error');
-                    } else {
-                        showLoginMessage('Google login failed: ' + error.message, 'error');
+                    let errorMessage = 'Google login failed: ';
+
+                    switch (error.code) {
+                        case 'auth/popup-closed-by-user':
+                            errorMessage = 'Login cancelled by user';
+                            break;
+                        case 'auth/network-request-failed':
+                            errorMessage = 'Network error. Please check your connection.';
+                            break;
+                        case 'auth/too-many-requests':
+                            errorMessage = 'Too many login attempts. Please try again later.';
+                            break;
+                        default:
+                            errorMessage += error.message;
                     }
+
+                    showLoginMessage(errorMessage, 'error');
                 }
             });
 

@@ -1,6 +1,7 @@
 class PrizePoolManager {
     constructor() {
-        this.apiBase = 'http://localhost:3000/api/prize-pool';
+        // Use dynamic API base URL from config
+        this.apiBase = window.AppConfig ? `${window.AppConfig.apiBaseUrl}/api/prize-pool` : 'http://localhost:3000/api/prize-pool';
         this.prizePoolInfo = null;
         this.updateInterval = null;
         this.isLoading = false;

@@ -155,6 +155,7 @@ class AttemptsUI {
         
         button.onclick = onClick;
         this.buttonsContainer.appendChild(button);
+        return button; // Return the button element
     }
     
     createButtons() {
