@@ -62,14 +62,12 @@ class AttemptsUI {
             gap: 15px;
         `;
         
-        // Create buttons
-        this.createButton('💰 Buy 3 Attempts ($1)', this.handlePurchase.bind(this), '#4CAF50');
-        this.createButton('📺 Watch Ad (1 Attempt)', this.handleWatchAd.bind(this), '#2196F3');
-        this.createButton('📸 Share on Instagram (1 Attempt)', this.handleInstagramShare.bind(this), '#E1306C');
-        this.createButton('👥 Refer Friend (1 Attempt)', this.handleReferFriend.bind(this), '#9C27B0');
-        
+        // Create buttons container for dynamic content
+        this.createButtons();
+
         // Add a cancel button
-        this.createButton('Cancel', () => this.hide(), '#999');
+        const cancelBtn = this.createButton('Cancel', () => this.hide(), '#999');
+        cancelBtn.setAttribute('data-cancel', 'true');
         
         // Create close button
         const closeButton = document.createElement('button');
@@ -159,6 +157,27 @@ class AttemptsUI {
         this.buttonsContainer.appendChild(button);
     }
     
+    createButtons() {
+        // Clear existing buttons (except cancel)
+        const existingButtons = this.buttonsContainer.querySelectorAll('button:not([data-cancel])');
+        existingButtons.forEach(btn => btn.remove());
+
+        // Check authentication status
+        const authManager = window.authManager;
+        const isAuthenticated = authManager && authManager.isAuthenticated();
+
+        if (isAuthenticated) {
+            // Show purchase options for authenticated users
+            this.createButton('💰 Buy 3 Attempts ($1)', this.handlePurchase.bind(this), '#4CAF50');
+            this.createButton('📺 Watch Ad (1 Attempt)', this.handleWatchAd.bind(this), '#2196F3');
+            this.createButton('📸 Share on Instagram (1 Attempt)', this.handleInstagramShare.bind(this), '#E1306C');
+            this.createButton('👥 Refer Friend (1 Attempt)', this.handleReferFriend.bind(this), '#9C27B0');
+        } else {
+            // Show login prompt for unauthenticated users
+            this.createButton('🔐 Login to Get More Attempts', this.handleLoginPrompt.bind(this), '#28a745');
+        }
+    }
+
     updateDisplay() {
         const attempts = this.attemptsManager.getAttempts();
         this.attemptsDisplay.innerHTML = `
@@ -167,6 +186,9 @@ class AttemptsUI {
                 ${attempts}
             </div>
         `;
+
+        // Update buttons based on auth status
+        this.createButtons();
     }
     
     show() {
@@ -231,6 +253,16 @@ class AttemptsUI {
             // The dialog will be closed when user clicks close button
         } else {
             alert(result.message);
+        }
+    }
+
+    handleLoginPrompt() {
+        this.hide();
+        // Show login modal if available
+        if (typeof showLoginModal === 'function') {
+            showLoginModal();
+        } else {
+            alert('Please login to purchase more attempts!');
         }
     }
 

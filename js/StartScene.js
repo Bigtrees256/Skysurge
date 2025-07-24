@@ -28,9 +28,21 @@ class StartScene extends Scene {
     
     update(deltaTime) {
         this.animationTime += deltaTime;
-        
+
         // Check for input to start game
         if (this.inputManager.isActionPressed()) {
+            // Check if user is authenticated first
+            const authManager = window.authManager;
+            if (!authManager || !authManager.isAuthenticated()) {
+                console.log('StartScene: User not authenticated, showing login modal');
+                if (typeof showLoginModal === 'function') {
+                    showLoginModal();
+                } else {
+                    console.error('StartScene: showLoginModal function not available');
+                }
+                return;
+            }
+
             const attemptsManager = this.game.getAttemptsManager();
             if (attemptsManager && attemptsManager.hasAttempts()) {
                 // Attempt will be consumed when game starts
@@ -39,7 +51,7 @@ class StartScene extends Scene {
                 // Show attempts UI
                 this.game.getAttemptsUI().show();
             } else {
-                // Attempts system not ready, start game anyway
+                // Attempts system not ready, start game anyway (for authenticated users)
                 this.switchScene('game');
             }
         }
@@ -73,9 +85,9 @@ class StartScene extends Scene {
         ctx.globalAlpha = pulse;
         ctx.font = '24px Arial';
         ctx.fillText(this.subtitle, width / 2, height / 2 + 20);
-        
+
         ctx.restore();
-        
+
         // Draw simple instructions
         ctx.save();
         ctx.fillStyle = '#666'; // Dark gray for instructions
@@ -83,21 +95,30 @@ class StartScene extends Scene {
         ctx.textAlign = 'center';
         ctx.fillText('Use SPACE, ARROW UP, or CLICK to jump', width / 2, height - 150);
         ctx.fillText('Avoid the obstacles and get the highest score!', width / 2, height - 130);
-        
-        // Draw attempts info - use current attempts count
-        const attemptsManager = this.game.getAttemptsManager();
-        if (attemptsManager) {
-            const attempts = attemptsManager.getAttempts();
-            console.log('[StartScene] render using attempts:', attempts, '(current count)');
-            ctx.fillStyle = attempts > 0 ? '#222' : '#666'; // Monotone colors
-            ctx.font = 'bold 18px Arial';
-            ctx.fillText(`Attempts: ${attempts}`, width / 2, height - 100);
-            
-            if (attempts === 0) {
-                ctx.fillStyle = '#666';
-                ctx.font = '14px Arial';
-                ctx.fillText('Tap to get more attempts!', width / 2, height - 80);
+
+        // Check authentication status for attempts display
+        const authManager = window.authManager;
+        const isAuthenticated = authManager && authManager.isAuthenticated();
+
+        if (isAuthenticated) {
+            // Draw attempts info for authenticated users
+            const attemptsManager = this.game.getAttemptsManager();
+            if (attemptsManager) {
+                const attempts = attemptsManager.getAttempts();
+                console.log('[StartScene] render using attempts:', attempts, '(current count)');
+                ctx.fillStyle = attempts > 0 ? '#222' : '#666'; // Monotone colors
+                ctx.font = 'bold 18px Arial';
+                ctx.fillText(`Attempts: ${attempts}`, width / 2, height - 100);
+
+                if (attempts === 0) {
+                    ctx.fillStyle = '#666';
+                    ctx.font = '14px Arial';
+                    ctx.fillText('Tap to get more attempts!', width / 2, height - 80);
+                }
             }
+        } else {
+            // For unauthenticated users, show nothing special
+            // Just let them enjoy the game
         }
         ctx.restore();
     }

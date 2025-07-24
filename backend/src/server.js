@@ -5,6 +5,7 @@ const connectDB = require('./db');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const compression = require('compression');
 
 // Initialize Firebase Admin
 const admin = require('./firebaseAdmin');
@@ -72,6 +73,19 @@ app.use(helmet({
     preload: true
   }
 }));
+
+// Compression middleware for better performance
+app.use(compression({
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  },
+  level: 6, // Compression level (1-9, 6 is good balance)
+  threshold: 1024 // Only compress responses larger than 1KB
+}));
+
 // CORS configuration for production and development
 const corsOptions = {
   origin: function (origin, callback) {

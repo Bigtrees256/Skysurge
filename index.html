@@ -291,13 +291,53 @@
             <div id="timer-display" style="font-weight: bold; color: #667eea;">Loading...</div>
         </div>
 
-        <!-- Rules Button -->
+        <!-- Rules Button and Login Button -->
         <div style="min-width: 200px; text-align: right;">
-            <button id="rules-tab" class="modern-btn" style="margin: 0; font-size: 0.8rem; padding: 8px 16px;" onclick="window.open('rules.html', '_blank')">📋 RULES</button>
+            <button id="rules-tab" class="modern-btn" style="margin: 0; font-size: 0.8rem; padding: 8px 16px; margin-right: 10px;" onclick="window.open('rules.html', '_blank')">📋 RULES</button>
+            <button id="login-btn" class="modern-btn" style="margin: 0; font-size: 0.8rem; padding: 8px 16px; background: #28a745; color: white; display: none;" onclick="showLoginModal()">🔐 LOGIN</button>
         </div>
     </div>
 
     <div id="loadingMessage" style="display:block; text-align:center; color:#667eea; font-size:1rem; margin-top:20px;">Checking authentication...</div>
+
+    <!-- Login Modal -->
+    <div id="loginModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; flex-direction: column;">
+        <div style="background: rgba(255, 255, 255, 0.95); padding: 40px; border-radius: 15px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3); text-align: center; max-width: 400px; width: 90%; position: relative;">
+            <button onclick="hideLoginModal()" style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">×</button>
+
+            <h2 style="color: #667eea; margin-bottom: 30px; font-size: 1.2rem; font-family: 'Press Start 2P', monospace;">LOGIN</h2>
+
+            <!-- Google Login Button -->
+            <button id="googleLoginBtn" class="modern-btn" style="width: 100%; padding: 15px; margin-bottom: 20px; background: #4285f4; color: white; border: none; border-radius: 8px; font-size: 0.8rem; cursor: pointer;">
+                🔐 Sign in with Google
+            </button>
+
+            <div style="margin: 20px 0; color: #666; font-size: 0.7rem;">OR</div>
+
+            <!-- Email/Password Form -->
+            <form id="emailLoginForm" style="text-align: left;">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-size: 0.6rem; color: #555;">EMAIL</label>
+                    <input type="email" id="modalEmail" required style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 0.8rem; font-family: Arial, sans-serif;">
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 5px; font-size: 0.6rem; color: #555;">PASSWORD</label>
+                    <input type="password" id="modalPassword" required style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 0.8rem; font-family: Arial, sans-serif;">
+                </div>
+                <button type="submit" class="modern-btn" style="width: 100%; padding: 15px; background: #667eea; color: white; border: none; border-radius: 8px; font-size: 0.8rem; cursor: pointer;">
+                    LOGIN
+                </button>
+            </form>
+
+            <div id="loginMessage" style="margin-top: 15px; font-size: 0.7rem; display: none;"></div>
+
+            <div style="margin-top: 20px; font-size: 0.6rem; color: #666;">
+                Don't have an account? <a href="register.html" style="color: #667eea; text-decoration: none;">Sign up here</a>
+            </div>
+        </div>
+    </div>
+
+
 
     <div id="gameContainer" class="glass" style="margin-top: 80px;">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
@@ -497,8 +537,8 @@
 
             // Set timeout to prevent infinite loading (increased for slower connections)
             const authTimeout = setTimeout(() => {
-                console.log('⚠️ Auth timeout - redirecting to login');
-                window.location.href = 'login.html';
+                console.log('⚠️ Auth timeout - showing login prompt');
+                showUnauthenticatedState();
             }, 15000);
 
             // Check auth state
@@ -508,9 +548,8 @@
                 showLoading(false);
 
                 if (!user) {
-                    console.log('❌ No user authenticated - redirecting to login');
-                    console.log('📍 Current URL:', window.location.href);
-                    window.location.href = 'login.html';
+                    console.log('❌ No user authenticated - showing login prompt');
+                    showUnauthenticatedState();
                     return;
                 }
 
@@ -549,8 +588,8 @@
                     // Continue anyway for now
                 }
 
-                // Show game
-                document.getElementById('gameContainer').style.display = 'block';
+                // Show authenticated state
+                showAuthenticatedState();
 
                 // Initialize game systems
                 if (document.readyState === 'complete') {
@@ -560,6 +599,152 @@
                 }
             });
         })();
+
+        // Show unauthenticated state
+        function showUnauthenticatedState() {
+            console.log('🔍 Showing unauthenticated state');
+            document.getElementById('gameContainer').style.display = 'block';
+            document.getElementById('login-btn').style.display = 'inline-block';
+            document.getElementById('user-info').style.display = 'none';
+            document.getElementById('loadingMessage').style.display = 'none';
+        }
+
+        // Show authenticated state
+        function showAuthenticatedState() {
+            console.log('✅ Showing authenticated state');
+            document.getElementById('gameContainer').style.display = 'block';
+            document.getElementById('login-btn').style.display = 'none';
+            document.getElementById('user-info').style.display = 'block';
+            document.getElementById('loadingMessage').style.display = 'none';
+        }
+
+        // Show login modal
+        function showLoginModal() {
+            console.log('🔐 Showing login modal');
+            const modal = document.getElementById('loginModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                console.log('✅ Login modal displayed');
+            } else {
+                console.error('❌ Login modal element not found');
+            }
+        }
+
+        // Hide login modal
+        function hideLoginModal() {
+            document.getElementById('loginModal').style.display = 'none';
+            clearLoginMessage();
+        }
+
+        // Clear login message
+        function clearLoginMessage() {
+            const messageDiv = document.getElementById('loginMessage');
+            messageDiv.style.display = 'none';
+            messageDiv.textContent = '';
+            messageDiv.className = '';
+        }
+
+        // Show login message
+        function showLoginMessage(message, type = 'error') {
+            const messageDiv = document.getElementById('loginMessage');
+            messageDiv.textContent = message;
+            messageDiv.style.display = 'block';
+            messageDiv.style.color = type === 'success' ? '#28a745' : '#dc3545';
+        }
+
+        // Handle Google login redirect result
+        firebase.auth().getRedirectResult().then(async (result) => {
+            if (result.user) {
+                console.log('✅ Google redirect login successful:', result.user.email);
+                // The auth state listener will handle the rest
+            }
+        }).catch((error) => {
+            console.error('❌ Google redirect login failed:', error);
+        });
+
+        // Initialize login modal functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Google login button
+            document.getElementById('googleLoginBtn').addEventListener('click', async () => {
+                try {
+                    clearLoginMessage();
+                    showLoginMessage('Signing in with Google...', 'info');
+
+                    const provider = new firebase.auth.GoogleAuthProvider();
+                    provider.addScope('email');
+                    provider.addScope('profile');
+
+                    // Try popup first, fallback to redirect if popup is blocked
+                    try {
+                        const result = await firebase.auth().signInWithPopup(provider);
+                        console.log('✅ Google login successful:', result.user.email);
+
+                        showLoginMessage('Login successful! Loading game...', 'success');
+                        hideLoginModal();
+                    } catch (popupError) {
+                        if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/popup-closed-by-user') {
+                            console.log('🔄 Popup blocked, trying redirect method...');
+                            showLoginMessage('Redirecting to Google...', 'info');
+                            await firebase.auth().signInWithRedirect(provider);
+                        } else {
+                            throw popupError;
+                        }
+                    }
+                } catch (error) {
+                    console.error('❌ Google login failed:', error);
+                    if (error.code === 'auth/popup-closed-by-user') {
+                        showLoginMessage('Login cancelled by user', 'error');
+                    } else {
+                        showLoginMessage('Google login failed: ' + error.message, 'error');
+                    }
+                }
+            });
+
+            // Email/Password login form
+            document.getElementById('emailLoginForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                clearLoginMessage();
+
+                const email = document.getElementById('modalEmail').value;
+                const password = document.getElementById('modalPassword').value;
+
+                try {
+                    showLoginMessage('Signing in...', 'info');
+                    const result = await firebase.auth().signInWithEmailAndPassword(email, password);
+                    console.log('✅ Email login successful:', result.user.email);
+
+                    showLoginMessage('Login successful! Loading game...', 'success');
+                    hideLoginModal();
+                } catch (error) {
+                    console.error('❌ Email login failed:', error);
+                    let errorMessage = 'Login failed: ';
+                    switch (error.code) {
+                        case 'auth/user-not-found':
+                            errorMessage += 'No account found with this email';
+                            break;
+                        case 'auth/wrong-password':
+                            errorMessage += 'Incorrect password';
+                            break;
+                        case 'auth/invalid-email':
+                            errorMessage += 'Invalid email address';
+                            break;
+                        case 'auth/too-many-requests':
+                            errorMessage += 'Too many failed attempts. Please try again later';
+                            break;
+                        default:
+                            errorMessage += error.message;
+                    }
+                    showLoginMessage(errorMessage, 'error');
+                }
+            });
+
+            // Close modal when clicking outside
+            document.getElementById('loginModal').addEventListener('click', (e) => {
+                if (e.target.id === 'loginModal') {
+                    hideLoginModal();
+                }
+            });
+        });
     </script>
     <!-- Game Scripts - Load in dependency order -->
     <script src="js/Scene.js?v=35"></script>
