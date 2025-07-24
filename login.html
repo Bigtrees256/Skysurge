@@ -272,70 +272,98 @@
 
             try {
                 showLoading(true);
+                showMessage('Redirecting to Google...', 'success');
+
                 const provider = new firebase.auth.GoogleAuthProvider();
                 provider.addScope('email');
                 provider.addScope('profile');
 
-                console.log('🔄 Starting Google login...');
+                console.log('🔄 Starting Google login redirect...');
+                console.log('🔍 Firebase initialized:', firebase.apps.length > 0);
+                console.log('🔍 Auth domain:', firebase.app().options.authDomain);
+
                 await firebase.auth().signInWithRedirect(provider);
 
             } catch (error) {
                 showLoading(false);
-                console.error('Google login error:', error);
+                console.error('❌ Google login error:', error);
+                console.error('❌ Error details:', {
+                    code: error.code,
+                    message: error.message
+                });
                 showMessage('Google login failed: ' + error.message);
             }
         });
 
-        // Handle redirect result
+        // Handle redirect result - Check immediately when page loads
+        console.log('🔍 Checking for Google redirect result...');
         firebase.auth().getRedirectResult().then(async (result) => {
+            console.log('🔍 Redirect result received:', result);
+
             if (result.user) {
                 console.log('✅ Google login successful:', result.user.email);
+                showLoading(true);
+                showMessage('Google login successful! Processing...', 'success');
 
                 try {
                     // Store token
                     const token = await result.user.getIdToken();
                     localStorage.setItem('authToken', token);
+                    console.log('✅ Token stored');
 
                     // Check if user exists in backend
+                    console.log('🔍 Checking user in backend...');
                     const response = await fetch(`${window.AppConfig.apiBaseUrl}/api/auth/user-info`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
 
                     if (response.ok) {
                         const userData = await response.json();
+                        console.log('✅ Backend response:', userData);
+
                         if (userData.user.needsUsername) {
+                            console.log('⚠️ User needs username setup');
                             showMessage('Redirecting to username setup...', 'success');
                             setTimeout(() => {
                                 window.location.href = 'setup-username.html';
                             }, 1000);
                         } else {
+                            console.log('✅ User has username, redirecting to game');
                             showMessage('Login successful! Redirecting to game...', 'success');
                             setTimeout(() => {
                                 window.location.href = 'index.html';
                             }, 1000);
                         }
                     } else {
-                        // User not in backend, needs username setup
+                        console.log('⚠️ User not in backend, needs username setup');
                         showMessage('Setting up your account...', 'success');
                         setTimeout(() => {
                             window.location.href = 'setup-username.html';
                         }, 1000);
                     }
                 } catch (error) {
-                    console.error('Post-login check error:', error);
+                    console.error('❌ Post-login check error:', error);
                     showMessage('Login successful! Redirecting...', 'success');
                     setTimeout(() => {
                         window.location.href = 'setup-username.html';
                     }, 1000);
                 }
+            } else {
+                console.log('🔍 No redirect result - user came directly to login page');
+                showLoading(false);
             }
         }).catch((error) => {
-            console.error('Redirect result error:', error);
+            console.error('❌ Redirect result error:', error);
+            console.error('❌ Error details:', {
+                code: error.code,
+                message: error.message
+            });
             showMessage('Authentication error: ' + error.message);
+            showLoading(false);
         });
 
-        // Show login form immediately
-        showLoading(false);
+        // Show loading initially while checking for redirect result
+        showLoading(true);
     </script>
 </body>
 </html>
