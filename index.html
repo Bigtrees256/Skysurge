@@ -350,8 +350,13 @@
             </button>
 
             <!-- Alternative Google Login (Redirect) -->
-            <button id="googleRedirectBtn" class="modern-btn" style="width: 100%; padding: 10px; margin-bottom: 20px; background: #357ae8; color: white; border: none; border-radius: 8px; font-size: 0.7rem; cursor: pointer; display: none;">
+            <button id="googleRedirectBtn" class="modern-btn" style="width: 100%; padding: 10px; margin-bottom: 10px; background: #357ae8; color: white; border: none; border-radius: 8px; font-size: 0.7rem; cursor: pointer; display: none;">
                 🔄 Try Google Login (Redirect)
+            </button>
+
+            <!-- Popup Test Button -->
+            <button id="testPopupBtn" class="modern-btn" style="width: 100%; padding: 8px; margin-bottom: 20px; background: #6c757d; color: white; border: none; border-radius: 8px; font-size: 0.6rem; cursor: pointer; display: none;">
+                🧪 Test if Popups Work
             </button>
 
             <div style="margin: 20px 0; color: #666; font-size: 0.7rem;">OR</div>
@@ -676,8 +681,9 @@
         function hideLoginModal() {
             document.getElementById('loginModal').style.display = 'none';
             clearLoginMessage();
-            // Reset redirect button
+            // Reset redirect and test buttons
             document.getElementById('googleRedirectBtn').style.display = 'none';
+            document.getElementById('testPopupBtn').style.display = 'none';
         }
 
         // Clear login message
@@ -738,6 +744,20 @@
                     // Only try popup method - no automatic redirect fallback
                     try {
                         console.log('🔄 Attempting Google popup login...');
+
+                        // Test if popups are allowed by opening a test popup
+                        const testPopup = window.open('', '_blank', 'width=1,height=1');
+                        if (!testPopup || testPopup.closed) {
+                            console.log('❌ Popups are blocked by browser');
+                            showLoginMessage('Popups are blocked. Please allow popups for this site or use the redirect option below.', 'error');
+                            document.getElementById('googleRedirectBtn').style.display = 'block';
+                            return;
+                        }
+                        testPopup.close();
+
+                        // Add a small delay to ensure popup isn't blocked by rapid clicks
+                        await new Promise(resolve => setTimeout(resolve, 100));
+
                         const result = await firebase.auth().signInWithPopup(provider);
                         console.log('✅ Google popup login successful:', result.user.email);
 
@@ -746,21 +766,33 @@
 
                     } catch (popupError) {
                         console.log('❌ Popup login failed:', popupError.code, popupError.message);
+                        console.log('❌ Full error object:', popupError);
 
                         // Handle specific popup errors without automatic redirect
                         if (popupError.code === 'auth/popup-closed-by-user') {
-                            showLoginMessage('Login cancelled. Please try again.', 'error');
-                        } else if (popupError.code === 'auth/popup-blocked') {
-                            showLoginMessage('Popup blocked by browser. Please use the redirect option below.', 'error');
-                            // Show the redirect button as alternative
+                            // Check if this was actually a user cancellation or a popup blocker
+                            showLoginMessage('Popup was closed. If you didn\'t close it, your browser may be blocking popups.', 'error');
+                            // Show both redirect and test options
                             document.getElementById('googleRedirectBtn').style.display = 'block';
+                            document.getElementById('testPopupBtn').style.display = 'block';
+                        } else if (popupError.code === 'auth/popup-blocked') {
+                            showLoginMessage('Popup blocked by browser. Please allow popups for this site.', 'error');
+                            // Show both redirect and test options
+                            document.getElementById('googleRedirectBtn').style.display = 'block';
+                            document.getElementById('testPopupBtn').style.display = 'block';
                         } else if (popupError.code === 'auth/cancelled-popup-request') {
-                            showLoginMessage('Login cancelled. Please try again.', 'error');
+                            showLoginMessage('Login request was cancelled. Please try again.', 'error');
+                            // Show both options for this case
+                            document.getElementById('googleRedirectBtn').style.display = 'block';
+                            document.getElementById('testPopupBtn').style.display = 'block';
                         } else if (popupError.code === 'auth/network-request-failed') {
                             showLoginMessage('Network error. Please check your connection and try again.', 'error');
+                        } else if (popupError.code === 'auth/unauthorized-domain') {
+                            showLoginMessage('This domain is not authorized for Google login. Please contact support.', 'error');
                         } else {
-                            // For other errors, show the actual error message
-                            showLoginMessage('Google login failed: ' + popupError.message, 'error');
+                            // For other errors, show the actual error message and provide redirect option
+                            showLoginMessage('Google login failed: ' + popupError.message + '. Try the redirect option below.', 'error');
+                            document.getElementById('googleRedirectBtn').style.display = 'block';
                         }
                     }
                 } catch (error) {
@@ -804,6 +836,31 @@
                 } catch (error) {
                     console.error('❌ Google redirect login failed:', error);
                     showLoginMessage('Redirect login failed: ' + error.message, 'error');
+                }
+            });
+
+            // Test popup button
+            document.getElementById('testPopupBtn').addEventListener('click', () => {
+                try {
+                    const testPopup = window.open('about:blank', '_blank', 'width=400,height=300,scrollbars=yes,resizable=yes');
+                    if (testPopup && !testPopup.closed) {
+                        testPopup.document.write(`
+                            <html>
+                                <head><title>Popup Test</title></head>
+                                <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+                                    <h2>✅ Popups Work!</h2>
+                                    <p>Your browser allows popups for this site.</p>
+                                    <p>You can now close this window and try Google login again.</p>
+                                    <button onclick="window.close()" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">Close</button>
+                                </body>
+                            </html>
+                        `);
+                        showLoginMessage('Popup test successful! You can now try Google login.', 'success');
+                    } else {
+                        showLoginMessage('Popups are blocked. Please allow popups for this site and try again.', 'error');
+                    }
+                } catch (error) {
+                    showLoginMessage('Popup test failed. Please allow popups for this site.', 'error');
                 }
             });
 
