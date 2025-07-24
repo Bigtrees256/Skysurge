@@ -219,16 +219,7 @@ app.get('/admin*', (req, res) => {
   });
 });
 
-// Handle SPA routing - serve index.html for non-API routes
-app.get('*', (req, res, next) => {
-  // Skip API routes
-  if (req.path.startsWith('/api/') || req.path.startsWith('/health')) {
-    return next();
-  }
 
-  // Serve index.html for all other routes
-  res.sendFile(path.join(frontendPath, 'index.html'));
-});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
