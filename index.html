@@ -15,6 +15,43 @@
     <!-- Configuration -->
     <script src="js/config.js?v=simple-fix"></script>
 
+    <!-- Global Error Handler for Extension Errors -->
+    <script>
+        // Handle unhandled promise rejections (often from browser extensions)
+        window.addEventListener('unhandledrejection', function(event) {
+            // Check if it's a browser extension error
+            if (event.reason &&
+                (event.reason.message?.includes('message channel closed') ||
+                 event.reason.message?.includes('Extension context invalidated') ||
+                 event.reason.message?.includes('The message port closed') ||
+                 event.reason.message?.includes('listener indicated an asynchronous response'))) {
+
+                console.log('🔇 Suppressed browser extension error:', event.reason.message);
+                event.preventDefault(); // Prevent the error from being logged
+                return;
+            }
+
+            // Log other unhandled rejections (these might be real issues)
+            console.error('❌ Unhandled promise rejection:', event.reason);
+        });
+
+        // Handle general errors
+        window.addEventListener('error', function(event) {
+            // Check if it's a browser extension error
+            if (event.message?.includes('message channel closed') ||
+                event.message?.includes('Extension context invalidated') ||
+                event.message?.includes('listener indicated an asynchronous response')) {
+
+                console.log('🔇 Suppressed browser extension error:', event.message);
+                event.preventDefault();
+                return;
+            }
+
+            // Log other errors (these are likely real application issues)
+            console.error('❌ JavaScript error:', event.error || event.message);
+        });
+    </script>
+
     <!-- Firebase Configuration -->
     <script>
         // Initialize Firebase with centralized config
