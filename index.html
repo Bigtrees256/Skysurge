@@ -308,8 +308,13 @@
             <h2 style="color: #667eea; margin-bottom: 30px; font-size: 1.2rem; font-family: 'Press Start 2P', monospace;">LOGIN</h2>
 
             <!-- Google Login Button -->
-            <button id="googleLoginBtn" class="modern-btn" style="width: 100%; padding: 15px; margin-bottom: 20px; background: #4285f4; color: white; border: none; border-radius: 8px; font-size: 0.8rem; cursor: pointer;">
+            <button id="googleLoginBtn" class="modern-btn" style="width: 100%; padding: 15px; margin-bottom: 10px; background: #4285f4; color: white; border: none; border-radius: 8px; font-size: 0.8rem; cursor: pointer;">
                 🔐 Sign in with Google
+            </button>
+
+            <!-- Alternative Google Login (Redirect) -->
+            <button id="googleRedirectBtn" class="modern-btn" style="width: 100%; padding: 10px; margin-bottom: 20px; background: #357ae8; color: white; border: none; border-radius: 8px; font-size: 0.7rem; cursor: pointer; display: none;">
+                🔄 Try Google Login (Redirect)
             </button>
 
             <div style="margin: 20px 0; color: #666; font-size: 0.7rem;">OR</div>
@@ -634,6 +639,8 @@
         function hideLoginModal() {
             document.getElementById('loginModal').style.display = 'none';
             clearLoginMessage();
+            // Reset redirect button
+            document.getElementById('googleRedirectBtn').style.display = 'none';
         }
 
         // Clear login message
@@ -691,7 +698,7 @@
                         prompt: 'select_account'
                     });
 
-                    // Try popup first with better error handling
+                    // Only try popup method - no automatic redirect fallback
                     try {
                         console.log('🔄 Attempting Google popup login...');
                         const result = await firebase.auth().signInWithPopup(provider);
@@ -703,20 +710,20 @@
                     } catch (popupError) {
                         console.log('❌ Popup login failed:', popupError.code, popupError.message);
 
-                        if (popupError.code === 'auth/popup-blocked' ||
-                            popupError.code === 'auth/popup-closed-by-user' ||
-                            popupError.code === 'auth/cancelled-popup-request') {
-
-                            console.log('🔄 Popup blocked/cancelled, trying redirect method...');
-                            showLoginMessage('Redirecting to Google...', 'info');
-
-                            // Use redirect as fallback
-                            await firebase.auth().signInWithRedirect(provider);
-
+                        // Handle specific popup errors without automatic redirect
+                        if (popupError.code === 'auth/popup-closed-by-user') {
+                            showLoginMessage('Login cancelled. Please try again.', 'error');
+                        } else if (popupError.code === 'auth/popup-blocked') {
+                            showLoginMessage('Popup blocked by browser. Please use the redirect option below.', 'error');
+                            // Show the redirect button as alternative
+                            document.getElementById('googleRedirectBtn').style.display = 'block';
+                        } else if (popupError.code === 'auth/cancelled-popup-request') {
+                            showLoginMessage('Login cancelled. Please try again.', 'error');
                         } else if (popupError.code === 'auth/network-request-failed') {
                             showLoginMessage('Network error. Please check your connection and try again.', 'error');
                         } else {
-                            throw popupError;
+                            // For other errors, show the actual error message
+                            showLoginMessage('Google login failed: ' + popupError.message, 'error');
                         }
                     }
                 } catch (error) {
@@ -738,6 +745,28 @@
                     }
 
                     showLoginMessage(errorMessage, 'error');
+                }
+            });
+
+            // Google redirect login button
+            document.getElementById('googleRedirectBtn').addEventListener('click', async () => {
+                try {
+                    clearLoginMessage();
+                    showLoginMessage('Redirecting to Google...', 'info');
+
+                    const provider = new firebase.auth.GoogleAuthProvider();
+                    provider.addScope('email');
+                    provider.addScope('profile');
+                    provider.setCustomParameters({
+                        prompt: 'select_account'
+                    });
+
+                    console.log('🔄 Using Google redirect login...');
+                    await firebase.auth().signInWithRedirect(provider);
+
+                } catch (error) {
+                    console.error('❌ Google redirect login failed:', error);
+                    showLoginMessage('Redirect login failed: ' + error.message, 'error');
                 }
             });
 
